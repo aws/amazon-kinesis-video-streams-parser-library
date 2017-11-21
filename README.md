@@ -1,4 +1,4 @@
-Kinesis Video
+Amazon Kinesis Video Streams Parser Library 
 
 ## License
 
