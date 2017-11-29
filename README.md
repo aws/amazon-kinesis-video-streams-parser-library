@@ -63,3 +63,6 @@ visited `MkvElement` for each constituent visitor in the order in which the visi
     * Unknown EBML elements not specified in `MkvTypeInfos` are not readable by the user using `StreamingMkvReader`.
     * Unknown EBML elements not specified in `MkvTypeInfos` of unknown length lead to an exception.
     * Does not do any CRC validation for any Mkv elements with the `CRC-32` element. 
+
+### Release 1.0.1 (November 2017)
+* Update to include the url for Amazon Kinesis Video Streams in the pom.xml

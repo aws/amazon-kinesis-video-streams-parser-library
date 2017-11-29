@@ -11,11 +11,12 @@
     <artifactId>amazon-kinesis-video-streams-parser-library</artifactId>
     <packaging>jar</packaging>
     <name>Amazon Kinesis Video Streams Parser Library</name>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <description>The Amazon Kinesis Video Streams Parser Library for Java enables Java developers to parse the streams
         returned by GetMedia calls to Amazon Kinesis Video.
     </description>
 
+    <url>https://aws.amazon.com/kinesis/video-streams</url>
     <scm>
         <url>https://github.com/aws/amazon-kinesis-video-streams-parser-library.git</url>
     </scm>
