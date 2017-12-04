@@ -34,8 +34,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static javafx.scene.input.KeyCode.L;
-
 /**
  * Test class to test {@link FragmentMetadataVisitor}.
  */
