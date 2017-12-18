@@ -54,7 +54,24 @@ the details of a particular track.
 `CompositeMkvElementVisitor` is a visitor that is made up of a number of constituent visitors. It calls accept on the 
 visited `MkvElement` for each constituent visitor in the order in which the visitors are specified.
 
+##Example
+`KinesisVideoExample` is an example that shows how the `StreamingMkvReader` and the different visitors can be integrated 
+with the AWS SDK for the Kinesis Video. This example provides examples for
+* Create a stream, deleting and recreating if the stream of the same name already exists.
+* Call PutMedia to stream video fragments into the stream.
+* Simultaneously call GetMedia to stream video fragments out of the stream.
+* It uses the StreamingMkvParser to parse the returned the stream and apply the `OutputSegmentMerger`, `FragmentMetadataVisitor` visitors
+ along with a local one as part of the same `CompositeMkvElementVisitor` visitor.
+                                         
+
 ## Release Notes
+### Release 1.0.2 (December 2017)
+* Add example that shows integration with Kinesis Video Streams.
+* Remove unnecessary import.
+
+### Release 1.0.1 (November 2017)
+* Update to include the url for Amazon Kinesis Video Streams in the pom.xml
+
 ### Release 1.0.0 (November 2017)
 * First release of the Amazon Kinesis Video Parser Library.
 * Supports Mkv elements up to version 4. 
@@ -63,6 +80,3 @@ visited `MkvElement` for each constituent visitor in the order in which the visi
     * Unknown EBML elements not specified in `MkvTypeInfos` are not readable by the user using `StreamingMkvReader`.
     * Unknown EBML elements not specified in `MkvTypeInfos` of unknown length lead to an exception.
     * Does not do any CRC validation for any Mkv elements with the `CRC-32` element. 
-
-### Release 1.0.1 (November 2017)
-* Update to include the url for Amazon Kinesis Video Streams in the pom.xml
