@@ -51,7 +51,10 @@ public class TestEBMLParserCallback implements EBMLParserCallbacks {
         long elementNumber = elementMetaData.getElementNumber();
         EBMLTypeInfo typeInfo = elementMetaData.getTypeInfo();
         log.info("On Start: elementNumber " + elementNumber + " typeInfo " + typeInfo.toString() + " size "
-                + elementDataSize + " rawbytes { " + hexDump(idAndSizeRawBytes) + " }");
+                + elementDataSize);
+        if (log.isDebugEnabled()) {
+            log.debug("Rawbytes { " + hexDump(idAndSizeRawBytes) + " }");
+        }
         dumpByteBufferToRawOutput(idAndSizeRawBytes);
 
         if (checkExpectedCallbacks) {
@@ -83,7 +86,10 @@ public class TestEBMLParserCallback implements EBMLParserCallbacks {
         long elementNumber = elementMetaData.getElementNumber();
         EBMLTypeInfo typeInfo = elementMetaData.getTypeInfo();
         log.info("On PartialContent: elementCount " + elementNumber + " typeInfo " + typeInfo.toString()
-                + " bytesToRead " + bytesToRead + "rawbytes { " + hexDump(contentBuffer) + " }");
+                + " bytesToRead " + bytesToRead);
+        if (log.isDebugEnabled()) {
+            log.debug("Rawbytes { " + hexDump(contentBuffer) + " }");
+        }
 
         dumpByteBufferToRawOutput(contentBuffer);
         if (checkExpectedCallbacks) {
