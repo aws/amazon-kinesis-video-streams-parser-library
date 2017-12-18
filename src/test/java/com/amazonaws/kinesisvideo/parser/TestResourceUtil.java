@@ -18,6 +18,8 @@ import org.apache.commons.lang3.Validate;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -58,5 +60,18 @@ public class TestResourceUtil {
         }while (readBytes >= 0);
 
         return outputStream.toByteArray();
+    }
+
+    /**
+     * Utility debug method to print the class path.
+     * Useful for verifying test setup in different build systems.
+     */
+    public static void printClassPath() {
+        ClassLoader cl = ClassLoader.getSystemClassLoader();
+        URL[] urls = ((URLClassLoader)cl).getURLs();
+
+        for(URL url: urls){
+            System.out.println(url.getFile());
+        }
     }
 }
