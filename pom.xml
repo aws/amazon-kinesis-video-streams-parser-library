@@ -53,6 +53,19 @@
             <version>1.11.247</version>
         </dependency>
 
+        <!-- Frame Decode/View -->
+        <dependency>
+            <groupId>org.jcodec</groupId>
+            <artifactId>jcodec</artifactId>
+            <version>0.2.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jcodec</groupId>
+            <artifactId>jcodec-javase</artifactId>
+            <version>0.2.2</version>
+        </dependency>
+
+
         <!--- Test -->
         <dependency>
             <groupId>junit</groupId>
