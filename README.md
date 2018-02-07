@@ -62,7 +62,9 @@ with the AWS SDK for the Kinesis Video. This example provides examples for
 * Simultaneously call GetMedia to stream video fragments out of the stream.
 * It uses the StreamingMkvParser to parse the returned the stream and apply the `OutputSegmentMerger`, `FragmentMetadataVisitor` visitors
  along with a local one as part of the same `CompositeMkvElementVisitor` visitor.
-                                         
+* GetMedia example shows parsing of KVS video stream fragments that were created using Kinesis video streams 
+  producer SDK gstreamer sample application. 
+  Also includes a sample approach for rendering those video frames after h264 decoding using http://jcodec.org/.                                         
 
 ## Release Notes
 ### Release 1.0.2 (December 2017)
