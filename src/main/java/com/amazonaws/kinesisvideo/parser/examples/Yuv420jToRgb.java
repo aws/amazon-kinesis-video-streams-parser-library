@@ -18,6 +18,7 @@ import org.jcodec.scale.Transform;
 /**
   *  The JCodec h264 decoded components are not resulting in right RGB transformation
   *  work-around to get the transform working.
+  *  TODO: Remove this class the Jcodec library jar is patched
  */
 public class Yuv420jToRgb implements Transform {
 
