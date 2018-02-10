@@ -62,8 +62,37 @@ with the AWS SDK for the Kinesis Video. This example provides examples for
 * Simultaneously call GetMedia to stream video fragments out of the stream.
 * It uses the StreamingMkvParser to parse the returned the stream and apply the `OutputSegmentMerger`, `FragmentMetadataVisitor` visitors
  along with a local one as part of the same `CompositeMkvElementVisitor` visitor.
-                                         
+* `KinesisVideoRendererExample` shows parsing and rendering of KVS video stream fragments using JCodec(http://jcodec.org/) that were ingested using Producer SDK GStreamer sample application.
+    * To run the example:
+ 
+      Run the Unit test KinesisVideoRendererExampleTest
 
+   ```
+        KinesisVideoRendererExample example = KinesisVideoRendererExample.builder().region(Regions.US_WEST_2)
+                .streamName("getmedia-sample-stream") //Use your stream name that been
+                                                      //stored in  Kinesis Video  (using GStreamer demo app or PutMedia using Java SDK)
+                .credentialsProvider(new ProfileCredentialsProvider())
+                .build();
+   ```
+   
+     After removing @Ignore and start the unitTest you should be able to view the frames in JFrame
+
+ * If you want to store it as image files you could do it by adding (in KinesisVideoRendererExample after AWTUtil.toBufferedImage(rgb, renderImage); )
+ 
+    ```
+    try {
+        ImageIO.write(renderImage, "png", new File(String.format("frame-capture-%s.png", UUID.randomUUID())));
+     } catch (IOException e) {
+        log.warn("Couldn't convert to a PNG", e);
+    }
+    ```
+ * Known Issues:  The decode/renderer sample using JCodec may not be able to decode all mkv files. 
+ * It has been tested  for streams sent to Kinesis Video Streams using GStreamer Demo application (https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp)
+ 
+## Release Notes
+### Release 1.0.3 (Februrary 2018)
+* Add example that shows parsing and rendering Kinesis Video Streams.
+   
 ## Release Notes
 ### Release 1.0.2 (December 2017)
 * Add example that shows integration with Kinesis Video Streams.
