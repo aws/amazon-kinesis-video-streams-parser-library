@@ -59,7 +59,6 @@ public class KinesisVideoConsumer extends KinesisVideoCommon {
     private final ExecutorService executorService;
     private KinesisVideoConsumer.GetMediaProcessingArguments getMediaProcessingArguments;
     private static BufferedImage renderImage;
-    private static KinesisVideoFrameViewer kinesisVideoFrameViewer;
     private static final String IMAGE_DIR = "/tmp/crowd_counting/frames";
 
     @Builder
@@ -71,10 +70,7 @@ public class KinesisVideoConsumer extends KinesisVideoCommon {
         configureClient(builder);
         this.amazonKinesisVideo = builder.build();
         this.executorService = Executors.newFixedThreadPool(1);
-        //Set frame width and height to match with video resolution of the stream
-        // for this example the video width and height are chosen to be 640 x 480.
-        kinesisVideoFrameViewer = new KinesisVideoFrameViewer(640, 480);
-        kinesisVideoFrameViewer.setVisible(true);
+        // Construct output directory.
         File image_dir = new File(IMAGE_DIR);
         image_dir.mkdirs();
     }
@@ -215,7 +211,6 @@ public class KinesisVideoConsumer extends KinesisVideoCommon {
                     Picture rgb = Picture.create(pixelWidth, pixelHeight, ColorSpace.RGB);
                     transform.transform(tmpBuf, rgb);
                     AWTUtil.toBufferedImage(rgb, renderImage);
-                    kinesisVideoFrameViewer.update(renderImage);
                     // Output each frames if they are usable.
                     Frame frame = ((MkvValue<Frame>)dataElement.getValueCopy()).getVal();
                     if(!frame.isDiscardable()) {
