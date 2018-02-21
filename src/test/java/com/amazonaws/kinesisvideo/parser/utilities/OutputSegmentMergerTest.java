@@ -87,10 +87,6 @@ public class OutputSegmentMergerTest {
     @Test
     public void mergeWithTimeCodeBackwards()
             throws IOException, InterruptedException, MkvElementVisitException {
-        List<EBMLTypeInfo> typeInfosToMergeOn = new ArrayList<>();
-        typeInfosToMergeOn.add(MkvTypeInfos.TRACKS);
-        typeInfosToMergeOn.add(MkvTypeInfos.EBML);
-
         //Read all the inputBytes so that we can compare with output bytes later.
         final byte [] inputBytes = TestResourceUtil.getTestInputByteArray("output_get_media.mkv");
         final InputStream in = getInputStreamForDoubleBytes(inputBytes);
@@ -111,7 +107,7 @@ public class OutputSegmentMergerTest {
             }
         }
 
-        final byte []outputBytes = outputStream.toByteArray();
+        final byte[] outputBytes = outputStream.toByteArray();
         Assert.assertFalse(Arrays.equals(inputBytes, outputBytes));
 
         //Count different types of elements present in the merged stream.
@@ -130,13 +126,51 @@ public class OutputSegmentMergerTest {
         Assert.assertEquals(120, countVisitor.getCount(MkvTypeInfos.TAGNAME));
     }
 
+    @Test
+    public void stopWithTimeCodeBackwards()
+            throws IOException, InterruptedException, MkvElementVisitException {
+        //Read all the inputBytes so that we can compare with output bytes later.
+        String fileName = "output-get-media-non-increasing-timecode.mkv";
+        CountVisitor countVisitor = runMergerToStopAtFirstNonMatchingSegment(fileName);
+
+        //Validate that there is only one EBML header and segment and tracks,
+        //only 1 cluster and other elements as expected
+        Assert.assertEquals(1, countVisitor.getCount(MkvTypeInfos.EBML));
+        Assert.assertEquals(1, countVisitor.getCount(MkvTypeInfos.EBMLVERSION));
+        Assert.assertEquals(1, countVisitor.getCount(MkvTypeInfos.SEGMENT));
+        Assert.assertEquals(1, countVisitor.getCount(MkvTypeInfos.CLUSTER));
+        Assert.assertEquals(1, countVisitor.getCount(MkvTypeInfos.TIMECODE));
+        Assert.assertEquals(1, countVisitor.getCount(MkvTypeInfos.TRACKS));
+        Assert.assertEquals(1, countVisitor.getCount(MkvTypeInfos.TRACKNUMBER));
+        Assert.assertEquals(30, countVisitor.getCount(MkvTypeInfos.SIMPLEBLOCK));
+        Assert.assertEquals(59, countVisitor.getCount(MkvTypeInfos.TAGNAME));
+    }
 
     @Test
-    public void mergeWithStopAfterFirstSegment()
+    public void stopWithTimeCodeEqual()
             throws IOException, InterruptedException, MkvElementVisitException {
-
         //Read all the inputBytes so that we can compare with output bytes later.
-        final byte [] inputBytes = TestResourceUtil.getTestInputByteArray("output_get_media.mkv");
+        String fileName = "output-get-media-equal-timecode.mkv";
+        CountVisitor countVisitor = runMergerToStopAtFirstNonMatchingSegment(fileName);
+
+        //Validate that there is only one EBML header and segment and tracks,
+        //only 1 cluster and other elements as expected
+        Assert.assertEquals(1, countVisitor.getCount(MkvTypeInfos.EBML));
+        Assert.assertEquals(1, countVisitor.getCount(MkvTypeInfos.EBMLVERSION));
+        Assert.assertEquals(1, countVisitor.getCount(MkvTypeInfos.SEGMENT));
+        Assert.assertEquals(1, countVisitor.getCount(MkvTypeInfos.CLUSTER));
+        Assert.assertEquals(1, countVisitor.getCount(MkvTypeInfos.TIMECODE));
+        Assert.assertEquals(1, countVisitor.getCount(MkvTypeInfos.TRACKS));
+        Assert.assertEquals(1, countVisitor.getCount(MkvTypeInfos.TRACKNUMBER));
+        Assert.assertEquals(120, countVisitor.getCount(MkvTypeInfos.SIMPLEBLOCK));
+        Assert.assertEquals(12, countVisitor.getCount(MkvTypeInfos.TAGNAME));
+    }
+
+
+
+    private CountVisitor runMergerToStopAtFirstNonMatchingSegment(String fileName)
+            throws IOException, MkvElementVisitException {
+        final byte [] inputBytes = TestResourceUtil.getTestInputByteArray(fileName);
         final InputStream in = getInputStreamForDoubleBytes(inputBytes);
 
         //Stream to receive the merged output.
@@ -157,11 +191,19 @@ public class OutputSegmentMergerTest {
 
         Assert.assertTrue(merger.isDone());
 
-        final byte []outputBytes = outputStream.toByteArray();
+        final byte[] outputBytes = outputStream.toByteArray();
         Assert.assertFalse(Arrays.equals(inputBytes, outputBytes));
 
         //Count different types of elements present in the merged stream.
-        CountVisitor countVisitor = getCountVisitorResult(outputBytes);
+        return getCountVisitorResult(outputBytes);
+    }
+
+    @Test
+    public void mergeWithStopAfterFirstSegment()
+            throws IOException, InterruptedException, MkvElementVisitException {
+
+        //Read all the inputBytes so that we can compare with output bytes later.
+        CountVisitor countVisitor = runMergerToStopAtFirstNonMatchingSegment("output_get_media.mkv");
 
         //Validate that there is only one EBML header and segment and tracks
         //but there are 32 clusters and tracks as expected.
