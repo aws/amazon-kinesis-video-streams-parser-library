@@ -219,6 +219,7 @@ public class KinesisVideoConsumer extends KinesisVideoCommon {
 	                    long fragmentTimestamp = serverSideTimestamp + timeCode;
 	                    Path path = Paths.get(IMAGE_DIR, fragmentTimestamp + ".png");
 	                    try {
+	                        System.out.println("Output image: " + path);
 	                    	ImageIO.write(renderImage, "png", new File(path.toString()));
 	                    } catch (IOException e) {
 	                    	e.printStackTrace();
