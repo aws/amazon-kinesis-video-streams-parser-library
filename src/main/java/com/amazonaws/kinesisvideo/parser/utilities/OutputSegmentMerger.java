@@ -38,6 +38,7 @@ import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.amazonaws.kinesisvideo.parser.utilities.OutputSegmentMerger.MergeState.BUFFERING_CLUSTER_START;
@@ -84,7 +85,7 @@ public class OutputSegmentMerger extends CompositeMkvElementVisitor {
     private final boolean stopAtFirstNonMatchingSegment;
     private long emittedSegments = 0;
 
-    private BigInteger lastClusterTimecode = BigInteger.ZERO;
+    private Optional<BigInteger> lastClusterTimecode = Optional.empty();
 
 
     private static final ByteBuffer SEGMENT_ELEMENT_WITH_UNKNOWN_LENGTH =
@@ -270,7 +271,8 @@ public class OutputSegmentMerger extends CompositeMkvElementVisitor {
                     case BUFFERING_CLUSTER_START:
                         if (MkvTypeInfos.TIMECODE.equals(dataElement.getElementMetaData().getTypeInfo())) {
                             MkvValue<BigInteger> currentTimeCode = dataElement.getValueCopy();
-                            if (currentTimeCode.getVal().compareTo(lastClusterTimecode) < 0) {
+                            if (lastClusterTimecode.isPresent()
+                                    && currentTimeCode.getVal().compareTo(lastClusterTimecode.get()) <= 0) {
                                 if (stopAtFirstNonMatchingSegment && emittedSegments >= 1) {
                                     log.info("Detected time code going back from {} to {}, state from {} to DONE",
                                             lastClusterTimecode,
@@ -287,13 +289,17 @@ public class OutputSegmentMerger extends CompositeMkvElementVisitor {
                                 resetChannels();
                                 state = EMITTING;
                                 emit(dataElement);
-                                lastClusterTimecode = currentTimeCode.getVal();
+                                lastClusterTimecode = Optional.of(currentTimeCode.getVal());
                             }
                         } else {
                             bufferAndCollect(dataElement);
                         }
                         break;
                     case EMITTING:
+                        if (MkvTypeInfos.TIMECODE.equals(dataElement.getElementMetaData().getTypeInfo())) {
+                            MkvValue<BigInteger> currentTimeCode = dataElement.getValueCopy();
+                            lastClusterTimecode = Optional.of(currentTimeCode.getVal());
+                        }
                         emit(dataElement);
                         break;
                     case DONE:

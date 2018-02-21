@@ -26,6 +26,7 @@ import lombok.RequiredArgsConstructor;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.math.BigInteger;
 
 /**
  * It logs the offsets and element sizes to a writer.
@@ -35,6 +36,7 @@ import java.io.IOException;
 public class ElementSizeAndOffsetVisitor extends MkvElementVisitor {
     private final BufferedWriter writer;
     private long offsetCount = 0;
+
 
     @Override
     public void visit(MkvStartMasterElement startMasterElement) throws MkvElementVisitException {
@@ -62,8 +64,7 @@ public class ElementSizeAndOffsetVisitor extends MkvElementVisitor {
 
     @Override
     public void visit(MkvDataElement dataElement) throws MkvElementVisitException {
-        StringBuilder builder = new StringBuilder();
-        appendOffset(dataElement, builder);
+        StringBuilder builder = createStringBuilderWithOffset(dataElement);
         appendCommonParts(dataElement, builder);
         builder.append(" element header size ")
                 .append(dataElement.getIdAndSizeRawBytes().limit())
@@ -78,21 +79,24 @@ public class ElementSizeAndOffsetVisitor extends MkvElementVisitor {
             //Print out the frame information.
             MkvValue<Frame> frameValue = dataElement.getValueCopy();
             Frame frame = frameValue.getVal();
-            StringBuilder frameStringBuilder = new StringBuilder();
-            appendOffset(dataElement, frameStringBuilder);
-            frameStringBuilder.append("Frame data (size): ")
+            buildAndWrite(createStringBuilderWithOffset(dataElement).append("Frame data (size): ")
                     .append(frame.getFrameData().limit())
                     .append(" ")
-                    .append(frame.toString());
-            buildAndWrite(frameStringBuilder);
+                    .append(frame.toString()));
         } else if (MkvTypeInfos.TAGNAME.equals(dataElement.getElementMetaData().getTypeInfo())) {
             MkvValue<String> tagName= dataElement.getValueCopy();
-            StringBuilder tagNameStringBuilder = new StringBuilder();
-            appendOffset(dataElement, tagNameStringBuilder);
-            tagNameStringBuilder.append("Tag Name :")
-                    .append(tagName.getVal());
-            buildAndWrite(tagNameStringBuilder);
+            buildAndWrite(createStringBuilderWithOffset(dataElement).append("Tag Name :").append(tagName.getVal()));
+        } else if (MkvTypeInfos.TIMECODE.equals(dataElement.getElementMetaData().getTypeInfo())) {
+            MkvValue<BigInteger> timeCode = dataElement.getValueCopy();
+            buildAndWrite(createStringBuilderWithOffset(dataElement).append("TimeCode :")
+                    .append(timeCode.getVal().toString()));
         }
+    }
+
+    private StringBuilder createStringBuilderWithOffset(MkvDataElement dataElement) {
+        StringBuilder frameStringBuilder = new StringBuilder();
+        appendOffset(dataElement, frameStringBuilder);
+        return frameStringBuilder;
     }
 
     private void appendCommonParts(MkvElement mkvElement, StringBuilder builder) {
