@@ -19,6 +19,7 @@ import lombok.Getter;
 import lombok.ToString;
 
 import java.nio.ByteBuffer;
+import java.nio.channels.WritableByteChannel;
 import java.util.List;
 
 /**
@@ -30,6 +31,7 @@ import java.util.List;
 @ToString(callSuper = true, exclude = "idAndSizeRawBytes")
 public class MkvStartMasterElement extends MkvElement {
     private final long dataSize;
+
     private final ByteBuffer idAndSizeRawBytes = ByteBuffer.allocate(MAX_ID_AND_SIZE_BYTES);
 
     @Builder
@@ -61,5 +63,14 @@ public class MkvStartMasterElement extends MkvElement {
 
     public boolean isUnknownLength() {
         return dataSize == 0xFFFFFFFFFFFFFFL;
+    }
+
+    @Override
+    public void writeToChannel(WritableByteChannel outputChannel) throws MkvElementVisitException {
+        writeByteBufferToChannel(idAndSizeRawBytes, outputChannel);
+    }
+
+    public int getIdAndSizeRawBytesLength() {
+        return idAndSizeRawBytes.limit();
     }
 }

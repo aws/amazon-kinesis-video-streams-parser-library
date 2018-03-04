@@ -78,6 +78,7 @@ public class KinesisVideoExample extends KinesisVideoCommon {
     private final InputStream inputStream;
     private final ExecutorService executorService;
     private PutMediaWorker putMediaWorker;
+    private final StreamOps streamOps;
     private GetMediaProcessingArguments getMediaProcessingArguments;
 
     @Builder
@@ -90,6 +91,7 @@ public class KinesisVideoExample extends KinesisVideoCommon {
         configureClient(builder);
         this.amazonKinesisVideo = builder.build();
         this.inputStream = inputVideoStream;
+        this.streamOps = new StreamOps(region,  streamName, credentialsProvider);
         this.executorService = Executors.newFixedThreadPool(2);
     }
 
@@ -101,7 +103,7 @@ public class KinesisVideoExample extends KinesisVideoCommon {
      */
     public void execute () throws InterruptedException, IOException {
         //Create the Kinesis Video stream, deleting and recreating if necessary.
-        recreateStreamIfNecessary();
+        streamOps.recreateStreamIfNecessary();
 
         getMediaProcessingArguments = GetMediaProcessingArguments.create();
 
@@ -130,7 +132,7 @@ public class KinesisVideoExample extends KinesisVideoCommon {
                 log.warn("Shutting down executor service by force");
                 executorService.shutdownNow();
             } else {
-                log.info("Exeutor service is shutdown");
+                log.info("Executor service is shutdown");
             }
         }
 
@@ -143,62 +145,6 @@ public class KinesisVideoExample extends KinesisVideoCommon {
     public long getFragmentsRead() {
         return getMediaProcessingArguments.getFragmentCount();
     }
-
-    /**
-     * If the stream exists delete it and then recreate it.
-     * Otherwise just create the stream.
-     */
-    private void recreateStreamIfNecessary() throws InterruptedException {
-        deleteStreamIfPresent();
-
-        //create the stream.
-        amazonKinesisVideo.createStream(new CreateStreamRequest().withStreamName(streamName)
-                .withDataRetentionInHours(DATA_RETENTION_IN_HOURS)
-                .withMediaType("video/h264"));
-        log.info("CreateStream called for stream {}", streamName);
-        //wait for stream to become active.
-        final Optional<StreamInfo> createdStreamInfo =
-                waitForStateToMatch((s) -> s.isPresent() && "ACTIVE".equals(s.get().getStatus()));
-        //some basic validations on the response of the create stream
-        Validate.isTrue(createdStreamInfo.isPresent());
-        Validate.isTrue(createdStreamInfo.get().getDataRetentionInHours() == DATA_RETENTION_IN_HOURS);
-        log.info("Stream {} created ARN {}", streamName, createdStreamInfo.get().getStreamARN());
-    }
-
-    private void deleteStreamIfPresent() throws InterruptedException {
-        final Optional<StreamInfo> streamInfo = getStreamInfo();
-        log.info("Stream {} exists {}", streamName, streamInfo.isPresent());
-        if (streamInfo.isPresent()) {
-            //Delete the stream
-            amazonKinesisVideo.deleteStream(new DeleteStreamRequest().withStreamARN(streamInfo.get().getStreamARN()));
-            log.info("DeleteStream called for stream {} ARN {} ", streamName, streamInfo.get().getStreamARN());
-            //Wait for stream to be deleted
-            waitForStateToMatch((s) -> !s.isPresent());
-            log.info("Stream {} deleted", streamName);
-        }
-    }
-
-    private Optional<StreamInfo> waitForStateToMatch(Predicate<Optional<StreamInfo>> statePredicate)
-            throws InterruptedException {
-        Optional<StreamInfo> streamInfo;
-        do {
-            streamInfo = getStreamInfo();
-            if (!statePredicate.test(streamInfo)) {
-                Thread.sleep(SLEEP_PERIOD_MILLIS);
-            }
-        } while (!statePredicate.test(streamInfo));
-        return streamInfo;
-    }
-
-    private Optional<StreamInfo> getStreamInfo() {
-        try {
-            return Optional.ofNullable(amazonKinesisVideo.describeStream(new DescribeStreamRequest().withStreamName(
-                    streamName)).getStreamInfo());
-        } catch (ResourceNotFoundException e) {
-            return Optional.empty();
-        }
-    }
-
 
     @RequiredArgsConstructor
     private static class LogVisitor extends MkvElementVisitor {

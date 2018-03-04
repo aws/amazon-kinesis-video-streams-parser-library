@@ -19,7 +19,11 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.ToString;
+import org.apache.commons.lang3.Validate;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.WritableByteChannel;
 import java.util.List;
 
 /**
@@ -45,4 +49,22 @@ public abstract class MkvElement {
     public abstract void accept(MkvElementVisitor visitor) throws MkvElementVisitException;
 
     public abstract boolean equivalent(MkvElement other);
+
+    public void writeToChannel(WritableByteChannel outputChannel) throws MkvElementVisitException {
+
+    }
+
+    protected void writeByteBufferToChannel(ByteBuffer src, WritableByteChannel outputChannel)
+            throws MkvElementVisitException {
+        src.rewind();
+        int size = src.remaining();
+        try {
+            int numBytes = outputChannel.write(src);
+            Validate.isTrue(size == numBytes, "Output channel wrote " + size + " bytes instead of " + numBytes);
+        } catch (IOException e) {
+            throw new MkvElementVisitException("Writing to output channel failed", e);
+        } finally {
+            src.rewind();
+        }
+    }
 }

@@ -44,7 +44,7 @@ public class ElementSizeAndOffsetVisitor extends MkvElementVisitor {
         appendOffset(startMasterElement, builder);
         appendCommonParts(startMasterElement, builder);
         builder.append(" element header size ")
-                .append(startMasterElement.getIdAndSizeRawBytes().limit())
+                .append(startMasterElement.getIdAndSizeRawBytesLength())
                 .append(" element data size ");
         if (startMasterElement.isUnknownLength()) {
             builder.append("unknown");
@@ -52,7 +52,7 @@ public class ElementSizeAndOffsetVisitor extends MkvElementVisitor {
             builder.append(startMasterElement.getDataSize());
         }
 
-        offsetCount += startMasterElement.getIdAndSizeRawBytes().limit();
+        offsetCount += startMasterElement.getIdAndSizeRawBytesLength();
 
         buildAndWrite(builder);
     }
@@ -67,11 +67,11 @@ public class ElementSizeAndOffsetVisitor extends MkvElementVisitor {
         StringBuilder builder = createStringBuilderWithOffset(dataElement);
         appendCommonParts(dataElement, builder);
         builder.append(" element header size ")
-                .append(dataElement.getIdAndSizeRawBytes().limit())
+                .append(dataElement.getIdAndSizeRawBytesLength())
                 .append(" element data size ")
                 .append(dataElement.getDataSize());
 
-        offsetCount += dataElement.getIdAndSizeRawBytes().limit();
+        offsetCount += dataElement.getIdAndSizeRawBytesLength();
         offsetCount += dataElement.getDataSize();
 
         buildAndWrite(builder);

@@ -26,6 +26,7 @@ import org.apache.commons.lang3.Validate;
 
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
@@ -47,6 +48,7 @@ public class MkvDataElement extends MkvElement {
     private static final Instant DATE_BASE_INSTANT = Instant.ofEpochSecond(978307200);
 
     private final long dataSize;
+
     private final ByteBuffer idAndSizeRawBytes;
 
     private ByteBuffer dataBuffer;
@@ -145,6 +147,24 @@ public class MkvDataElement extends MkvElement {
         }
         MkvDataElement otherDataElement = (MkvDataElement) other;
         return this.dataSize == otherDataElement.dataSize && this.valueCopy.equals(otherDataElement.valueCopy);
+    }
+
+
+    @Override
+    public void writeToChannel(WritableByteChannel outputChannel) throws MkvElementVisitException {
+        writeByteBufferToChannel(idAndSizeRawBytes, outputChannel);
+        writeByteBufferToChannel(dataBuffer, outputChannel);
+    }
+
+    public int getIdAndSizeRawBytesLength() {
+        return idAndSizeRawBytes.limit();
+    }
+
+    public int getDataBufferSize() {
+        if (dataBuffer == null ) {
+            return 0;
+        }
+        return dataBuffer.limit();
     }
 
     void clearDataBuffer() {

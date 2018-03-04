@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and limitations 
 package com.amazonaws.kinesisvideo.parser.examples;
 
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
+import com.amazonaws.kinesisvideo.parser.TestResourceUtil;
 import com.amazonaws.regions.Regions;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -21,18 +22,17 @@ import org.junit.Test;
 import java.io.IOException;
 
 public class KinesisVideoRendererExampleTest {
-
+    /* long running test */
     @Ignore
     @Test
     public void testExample() throws InterruptedException, IOException {
         KinesisVideoRendererExample example = KinesisVideoRendererExample.builder().region(Regions.US_WEST_2)
-                .streamName("getmedia-sample-stream")
+                .streamName("render-example-stream")
                 .credentialsProvider(new ProfileCredentialsProvider())
+                .inputVideoStream(TestResourceUtil.getTestInputStream("rendering_example_video.mkv"))
                 .build();
 
         example.execute();
     }
-
 }
-
 

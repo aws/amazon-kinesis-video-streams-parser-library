@@ -126,6 +126,24 @@ public class StreamingMkvReader {
         return getMkvElementToReturn();
     }
 
+    /**
+     * Method to apply a visitor in a loop to all the elements returns by a StreamingMkvReader.
+     * This method polls for the next available element in a tight loop.
+     * It might not be suitable in cases where the user wants to interleave some other activity between polling.
+     *
+     * @param visitor The visitor to apply.
+     * @throws MkvElementVisitException If the visitor fails.
+     */
+    public void apply(MkvElementVisitor visitor) throws MkvElementVisitException {
+        while (this.mightHaveNext()) {
+            Optional<MkvElement> mkvElementOptional = this.nextIfAvailable();
+            if (mkvElementOptional.isPresent()) {
+                mkvElementOptional.get().accept(visitor);
+            }
+        }
+    }
+
+
     private Optional<MkvElement> getMkvElementToReturn() {
         Optional<MkvElement> currentElement = mkvStreamReaderCallback.getMkvElementIfAvailable();
 
