@@ -86,13 +86,7 @@ public class GetMediaWorker extends KinesisVideoCommon implements Runnable {
             StreamingMkvReader mkvStreamReader = StreamingMkvReader.createDefault(new InputStreamParserByteSource(result.getPayload()));
             log.info("StreamingMkvReader created for stream {} ", streamName);
             try {
-                while (mkvStreamReader.mightHaveNext()) {
-                    Optional<MkvElement> mkvElementOptional = mkvStreamReader.nextIfAvailable();
-                    if (mkvElementOptional.isPresent()) {
-                        //Apply the MkvElement to the visitor
-                        mkvElementOptional.get().accept(elementVisitor);
-                    }
-                }
+                mkvStreamReader.apply(this.elementVisitor);
             } catch (MkvElementVisitException e) {
                 log.error("Exception while accepting visitor {}", e);
             }

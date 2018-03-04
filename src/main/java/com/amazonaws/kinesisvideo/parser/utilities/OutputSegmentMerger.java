@@ -333,15 +333,15 @@ public class OutputSegmentMerger extends CompositeMkvElementVisitor {
                 SEGMENT_ELEMENT_WITH_UNKNOWN_LENGTH.rewind();
                 bufferingSegmentChannel.write(SEGMENT_ELEMENT_WITH_UNKNOWN_LENGTH);
             } else {
-                bufferingSegmentChannel.write(startMasterElement.getIdAndSizeRawBytes());
+                startMasterElement.writeToChannel(bufferingSegmentChannel);
             }
         } else {
-            bufferingClusterChannel.write(startMasterElement.getIdAndSizeRawBytes());
+            startMasterElement.writeToChannel(bufferingClusterChannel);
         }
         this.sendElementToAllCollectors(startMasterElement);
     }
 
-    private void bufferAndCollect(MkvDataElement dataElement) throws IOException, MkvElementVisitException {
+    private void bufferAndCollect(MkvDataElement dataElement) throws MkvElementVisitException {
         Validate.isTrue(state == MergeState.BUFFERING_SEGMENT || state == MergeState.BUFFERING_CLUSTER_START,
                 "Trying to buffer in wrong state " + state);
         if (MergeState.BUFFERING_SEGMENT == state) {
@@ -352,20 +352,18 @@ public class OutputSegmentMerger extends CompositeMkvElementVisitor {
         this.sendElementToAllCollectors(dataElement);
     }
 
-    private static void writeToChannel(WritableByteChannel byteChannel, MkvDataElement dataElement) throws IOException {
-        byteChannel.write(dataElement.getIdAndSizeRawBytes());
-        byteChannel.write(dataElement.getDataBuffer());
+    private static void writeToChannel(WritableByteChannel byteChannel, MkvDataElement dataElement) throws MkvElementVisitException {
+        dataElement.writeToChannel(byteChannel);
     }
 
-    private void emit(MkvStartMasterElement startMasterElement) throws IOException {
+    private void emit(MkvStartMasterElement startMasterElement) throws MkvElementVisitException {
         Validate.isTrue(state == EMITTING, "emitting in wrong state "+state);
-        outputChannel.write(startMasterElement.getIdAndSizeRawBytes());
+        startMasterElement.writeToChannel(outputChannel);
     }
 
-    private void emit(MkvDataElement dataElement) throws IOException {
+    private void emit(MkvDataElement dataElement) throws MkvElementVisitException {
         Validate.isTrue(state == EMITTING, "emitting in wrong state "+state);
-        outputChannel.write(dataElement.getIdAndSizeRawBytes());
-        outputChannel.write(dataElement.getDataBuffer());
+        dataElement.writeToChannel(outputChannel);
     }
 
     private void collect(MkvEndMasterElement endMasterElement) throws MkvElementVisitException {

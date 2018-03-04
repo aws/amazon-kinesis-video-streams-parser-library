@@ -54,6 +54,11 @@ the details of a particular track.
 `CompositeMkvElementVisitor` is a visitor that is made up of a number of constituent visitors. It calls accept on the 
 visited `MkvElement` for each constituent visitor in the order in which the visitors are specified.
 
+`FrameVisitor` is a visitor used to process the frames in the output of a GetMedia call. It invokes an implementation of the
+ `FrameVisitor.FrameProcessor` and provides it with a `Frame` object and the metadata of the track to which the `Frame` belongs.
+
+`CopyVisitor` is a visitor used to copy the raw bytes of the Mkv elements in a stream to an output stream.
+
 ##Example
 `KinesisVideoExample` is an example that shows how the `StreamingMkvReader` and the different visitors can be integrated 
 with the AWS SDK for the Kinesis Video. This example provides examples for
@@ -91,7 +96,12 @@ with the AWS SDK for the Kinesis Video. This example provides examples for
  
 ## Release Notes
 ### Release 1.0.3 (Februrary 2018)
+*  In OutputSegmentMerger, make sure that the lastClusterTimecode is updated for the first fragment.
+If timecode is equal to that of a previous cluster, stop merging
+* FrameVisitor to process the frames in the output of a GetMedia call.
+* CopyVisitor to copy the raw bytes of the stream being parsed to an output stream.
 * Add example that shows parsing and rendering Kinesis Video Streams.
+
    
 ## Release Notes
 ### Release 1.0.2 (December 2017)

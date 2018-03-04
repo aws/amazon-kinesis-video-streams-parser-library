@@ -294,7 +294,7 @@ public class FragmentMetadataVisitor extends CompositeMkvElementVisitor {
                 .filter(e -> MkvTypeInfos.SIMPLETAG.equals(getParentElement(e).getTypeInfo()))
                 .filter(e -> isTagFromKinesisVideo((MkvDataElement) e))
                 .collect(Collectors.toMap(this::getMkvElementStringVal,
-                        e -> getParentElement(e).getElementNumber()));
+                        e -> getParentElement(e).getElementNumber(), (a,b)->b));
         Map<Long, String> parentElementNumberToTagValue = tagElements.stream()
                 .filter(e -> MkvTypeInfos.TAGSTRING.equals(e.getElementMetaData().getTypeInfo()))
                 .filter(e -> MkvTypeInfos.SIMPLETAG.equals(getParentElement(e).getTypeInfo()))
