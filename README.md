@@ -59,30 +59,20 @@ visited `MkvElement` for each constituent visitor in the order in which the visi
 
 `CopyVisitor` is a visitor used to copy the raw bytes of the Mkv elements in a stream to an output stream.
 
-##Example
-`KinesisVideoExample` is an example that shows how the `StreamingMkvReader` and the different visitors can be integrated 
+## Example
+* `KinesisVideoExample` is an example that shows how the `StreamingMkvReader` and the different visitors can be integrated 
 with the AWS SDK for the Kinesis Video. This example provides examples for
-* Create a stream, deleting and recreating if the stream of the same name already exists.
-* Call PutMedia to stream video fragments into the stream.
-* Simultaneously call GetMedia to stream video fragments out of the stream.
-* It uses the StreamingMkvParser to parse the returned the stream and apply the `OutputSegmentMerger`, `FragmentMetadataVisitor` visitors
+
+    * Create a stream, deleting and recreating if the stream of the same name already exists.
+    * Call PutMedia to stream video fragments into the stream.
+    * Simultaneously call GetMedia to stream video fragments out of the stream.
+    * It uses the StreamingMkvParser to parse the returned the stream and apply the `OutputSegmentMerger`, `FragmentMetadataVisitor` visitors
  along with a local one as part of the same `CompositeMkvElementVisitor` visitor.
-* `KinesisVideoRendererExample` shows parsing and rendering of KVS video stream fragments using JCodec(http://jcodec.org/) that were ingested using Producer SDK GStreamer sample application.
-    * To run the example:
  
-      Run the Unit test KinesisVideoRendererExampleTest
-
-   ```
-        KinesisVideoRendererExample example = KinesisVideoRendererExample.builder().region(Regions.US_WEST_2)
-                .streamName("getmedia-sample-stream") //Use your stream name that been
-                                                      //stored in  Kinesis Video  (using GStreamer demo app or PutMedia using Java SDK)
-                .credentialsProvider(new ProfileCredentialsProvider())
-                .build();
-   ```
-   
-     After removing @Ignore and start the unitTest you should be able to view the frames in JFrame
-
- * If you want to store it as image files you could do it by adding (in KinesisVideoRendererExample after AWTUtil.toBufferedImage(rgb, renderImage); )
+* `KinesisVideoRendererExample` shows parsing and rendering of KVS video stream fragments using JCodec(http://jcodec.org/) that were ingested using Producer SDK GStreamer sample application.
+    * To run the example:    
+      Run the Unit test `testExample` in `KinesisVideoRendererExampleTest`. After starting the unitTest you should be able to view the frames in a JFrame.
+    * If you want to store it as image files you could do it by adding (in KinesisVideoRendererExample after AWTUtil.toBufferedImage(rgb, renderImage); )
  
     ```
     try {
@@ -90,9 +80,8 @@ with the AWS SDK for the Kinesis Video. This example provides examples for
      } catch (IOException e) {
         log.warn("Couldn't convert to a PNG", e);
     }
-    ```
- * Known Issues:  The decode/renderer sample using JCodec may not be able to decode all mkv files. 
- * It has been tested  for streams sent to Kinesis Video Streams using GStreamer Demo application (https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp)
+    ``` 
+    * It has been tested not only for streams ingested by `PutMediaWorker` but also streams sent to Kinesis Video Streams using GStreamer Demo application (https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp)    
  
 ## Release Notes
 ### Release 1.0.3 (Februrary 2018)
@@ -101,9 +90,8 @@ If timecode is equal to that of a previous cluster, stop merging
 * FrameVisitor to process the frames in the output of a GetMedia call.
 * CopyVisitor to copy the raw bytes of the stream being parsed to an output stream.
 * Add example that shows parsing and rendering Kinesis Video Streams.
-
+* Known Issues:  In `KinesisVideoRendererExample`, the decode/renderer sample using JCodec may not be able to decode all mkv files.
    
-## Release Notes
 ### Release 1.0.2 (December 2017)
 * Add example that shows integration with Kinesis Video Streams.
 * Remove unnecessary import.
