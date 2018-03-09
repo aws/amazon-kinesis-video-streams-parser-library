@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and limitations 
 package com.amazonaws.kinesisvideo.parser.examples;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.kinesisvideo.parser.ebml.MkvTypeInfos;
+import com.amazonaws.kinesisvideo.parser.mkv.Frame;
 import com.amazonaws.kinesisvideo.parser.mkv.MkvDataElement;
 import com.amazonaws.kinesisvideo.parser.mkv.MkvElementVisitException;
 import com.amazonaws.kinesisvideo.parser.mkv.MkvElementVisitor;
@@ -40,11 +40,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
 
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.awt.image.BufferedImage;
 import java.io.BufferedOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -53,6 +58,18 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
+
+import org.jcodec.codecs.h264.H264Decoder;
+import org.jcodec.codecs.h264.mp4.AvcCBox;
+import org.jcodec.common.model.ColorSpace;
+import org.jcodec.common.model.Picture;
+import org.jcodec.scale.AWTUtil;
+import org.jcodec.scale.Transform;
+import org.jcodec.scale.Yuv420pToRgb;
+
+import static org.jcodec.codecs.h264.H264Utils.splitMOVPacket;
+
+import java.awt.*;
 
 /**
  * Example for integrating with Kinesis Video.
@@ -148,7 +165,16 @@ public class KinesisVideoExample extends KinesisVideoCommon {
 
     @RequiredArgsConstructor
     private static class LogVisitor extends MkvElementVisitor {
+        private byte[] codecPrivate;
+        private String codecID;
+        private int pixelWidth = 0;
+        private int pixelHeight = 0;
+        private H264Decoder decoder = new H264Decoder();
+        private Transform transform = new Yuv420pToRgb();
+
         private final FragmentMetadataVisitor fragmentMetadataVisitor;
+
+        UIRenderer uiRenderer = new UIRenderer();
 
         @Getter
         private long fragmentCount = 0;
@@ -172,6 +198,85 @@ public class KinesisVideoExample extends KinesisVideoCommon {
 
         @Override
         public void visit(MkvDataElement dataElement) throws MkvElementVisitException {
+            uiRenderer.setVisible(true);
+            log.info("Got data element: {}", dataElement.getElementMetaData().getTypeInfo().getName());
+            final String dataElementName = dataElement.getElementMetaData().getTypeInfo().getName();
+
+            if ("CodecID".equals(dataElementName)) {
+                codecID = (String)dataElement.getValueCopy().getVal();
+                // This is a C-style string, so remove the trailing null characters
+                codecID = codecID.trim();
+                log.info("Codec ID: {}", codecID);
+            }
+
+            if ("CodecPrivate".equals(dataElementName)) {
+                codecPrivate = ((ByteBuffer)dataElement.getValueCopy().getVal()).array().clone();
+                log.info("CodecPrivate: {}", codecPrivate);
+            }
+
+            if ("PixelWidth".equals(dataElementName)) {
+                pixelWidth = ((BigInteger)dataElement.getValueCopy().getVal()).intValue();
+                log.info("Pixel Width: {}", pixelWidth);
+            }
+
+            if ("PixelHeight".equals(dataElementName)) {
+                pixelHeight = ((BigInteger)dataElement.getValueCopy().getVal()).intValue();
+                log.info("Pixel Height: {}", pixelHeight);
+            }
+
+            if ("SimpleBlock".equals(dataElementName)) {
+                final ByteBuffer dataBuffer = ((Frame)dataElement.getValueCopy().getVal()).getFrameData();
+
+                final Picture rgb = Picture.create(pixelWidth, pixelHeight, ColorSpace.RGB);
+                final BufferedImage bi = new BufferedImage(pixelWidth, pixelHeight, BufferedImage.TYPE_3BYTE_BGR);
+                final AvcCBox avcC = AvcCBox.parseAvcCBox(ByteBuffer.wrap(codecPrivate));
+
+                decoder.addSps(avcC.getSpsList());
+                decoder.addPps(avcC.getPpsList());
+
+                final Picture buf = Picture.create(pixelWidth, pixelHeight, ColorSpace.YUV422);
+                final Picture pic = decoder.decodeFrameFromNals(splitMOVPacket(dataBuffer, avcC), buf.getData());
+                transform.transform(pic, rgb);
+                AWTUtil.toBufferedImage(rgb, bi);
+
+                uiRenderer.setImage(bi, pixelWidth, pixelHeight);
+            }
+        }
+    }
+
+    private static class UIRenderer extends java.awt.Frame {
+        BufferedImage bi;
+        int weidth = 400;
+        int height = 400;
+
+        public UIRenderer(){
+            addExitListener();
+        }
+
+        private void addExitListener(){
+            addWindowListener(new WindowAdapter() {
+                public void windowClosing(final WindowEvent windowEvent){
+                    System.exit(0);
+                }
+            });
+        }
+
+        public void setImage(final BufferedImage bi, final int weidth, final int height) {
+            this.bi = bi;
+            this.weidth = weidth;
+            this.height = height;
+            repaint();
+        }
+
+        @Override
+        public void paint(Graphics g) {
+            setSize(weidth, height);
+            final Graphics2D g2 = (Graphics2D)g;
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            /* Draw the image, applying the filter */
+            if (bi != null) {
+                g2.drawImage(bi, 0, 0, null);
+            }
         }
     }
 

@@ -91,7 +91,7 @@ public class GetMediaWorker extends KinesisVideoCommon implements Runnable {
                 log.error("Exception while accepting visitor {}", e);
             }
         } catch (Throwable t) {
-            log.error("Failure in GetMediaWorker for streamName {} {}", streamName, t.toString());
+            log.error("Failure in GetMediaWorker for streamName {} {}", streamName, t.toString(), t);
             throw t;
         } finally {
             log.info("Exiting GetMediaWorker for stream {}", streamName);
