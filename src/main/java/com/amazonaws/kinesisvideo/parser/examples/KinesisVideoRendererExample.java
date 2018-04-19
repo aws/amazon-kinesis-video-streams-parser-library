@@ -13,25 +13,22 @@ See the License for the specific language governing permissions and limitations 
 */
 package com.amazonaws.kinesisvideo.parser.examples;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-
-import com.amazonaws.kinesisvideo.parser.utilities.FrameVisitor;
-import com.amazonaws.kinesisvideo.parser.utilities.H264FrameRenderer;
-import com.amazonaws.regions.Regions;
-
-import com.amazonaws.services.kinesisvideo.model.StartSelector;
-import com.amazonaws.services.kinesisvideo.model.StartSelectorType;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
-
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.kinesisvideo.parser.utilities.FrameVisitor;
+import com.amazonaws.kinesisvideo.parser.utilities.H264FrameRenderer;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.kinesisvideo.model.StartSelector;
+import com.amazonaws.services.kinesisvideo.model.StartSelectorType;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 /*
  * Example for integrating with Kinesis Video.

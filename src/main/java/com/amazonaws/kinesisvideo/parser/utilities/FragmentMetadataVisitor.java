@@ -149,6 +149,12 @@ public class FragmentMetadataVisitor extends CompositeMkvElementVisitor {
                         state = State.NEW;
                     }
                     break;
+                case PRE_CLUSTER:
+                    if (MkvTypeInfos.SEGMENT.equals(endMasterElement.getElementMetaData().getTypeInfo())) {
+                        log.warn("Segment end {} while in PRE_CLUSTER. Collecting cluster info", endMasterElement);
+                        collectPreClusterInfo();
+                    }
+                    break;
                 default:
                     break;
             }

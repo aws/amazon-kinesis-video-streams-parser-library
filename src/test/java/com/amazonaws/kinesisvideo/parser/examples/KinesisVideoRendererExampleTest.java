@@ -29,7 +29,7 @@ public class KinesisVideoRendererExampleTest {
         KinesisVideoRendererExample example = KinesisVideoRendererExample.builder().region(Regions.US_WEST_2)
                 .streamName("render-example-stream")
                 .credentialsProvider(new ProfileCredentialsProvider())
-                .inputVideoStream(TestResourceUtil.getTestInputStream("rendering_example_video.mkv"))
+                .inputVideoStream(TestResourceUtil.getTestInputStream("clusters.mkv"))
                 .build();
 
         example.execute();

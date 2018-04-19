@@ -40,8 +40,8 @@ public class KinesisVideoExampleTest {
                 .build();
 
         example.execute();
-        Assert.assertEquals(5, example.getFragmentsPersisted());
-        Assert.assertEquals(5, example.getFragmentsRead());
+        Assert.assertEquals(8, example.getFragmentsPersisted());
+        Assert.assertEquals(8, example.getFragmentsRead());
     }
 
 }

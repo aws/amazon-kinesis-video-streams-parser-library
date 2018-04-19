@@ -13,20 +13,26 @@ See the License for the specific language governing permissions and limitations 
 */
 package com.amazonaws.kinesisvideo.parser.examples;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.kinesisvideo.AmazonKinesisVideo;
-import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoClientBuilder;
-import com.amazonaws.services.kinesisvideo.model.*;
-import lombok.Builder;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.Validate;
-
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.kinesisvideo.AmazonKinesisVideo;
+import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoClientBuilder;
+import com.amazonaws.services.kinesisvideo.model.CreateStreamRequest;
+import com.amazonaws.services.kinesisvideo.model.DeleteStreamRequest;
+import com.amazonaws.services.kinesisvideo.model.DescribeStreamRequest;
+import com.amazonaws.services.kinesisvideo.model.ResourceNotFoundException;
+import com.amazonaws.services.kinesisvideo.model.StreamInfo;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.Validate;
+
 @Slf4j
+@Getter
 public class StreamOps extends KinesisVideoCommon {
     private static final long SLEEP_PERIOD_MILLIS = TimeUnit.SECONDS.toMillis(3);
     private static final int DATA_RETENTION_IN_HOURS = 48;
