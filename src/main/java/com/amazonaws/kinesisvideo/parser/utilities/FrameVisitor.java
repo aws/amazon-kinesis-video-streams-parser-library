@@ -13,6 +13,8 @@ See the License for the specific language governing permissions and limitations 
 */
 package com.amazonaws.kinesisvideo.parser.utilities;
 
+import java.util.Optional;
+
 import com.amazonaws.kinesisvideo.parser.ebml.MkvTypeInfos;
 import com.amazonaws.kinesisvideo.parser.mkv.Frame;
 import com.amazonaws.kinesisvideo.parser.mkv.MkvElementVisitor;
@@ -41,7 +43,8 @@ public class FrameVisitor extends CompositeMkvElementVisitor {
     }
 
     public interface FrameProcessor {
-        default void process(Frame frame, MkvTrackMetadata trackMetadata) {
+        default void process(Frame frame, MkvTrackMetadata trackMetadata,
+                             Optional<FragmentMetadata> fragmentMetadata) {
             throw new NotImplementedException("Default FrameVisitor.FrameProcessor");
         }
     }
@@ -66,7 +69,8 @@ public class FrameVisitor extends CompositeMkvElementVisitor {
                 Validate.notNull(frame);
                 MkvTrackMetadata trackMetadata =
                         fragmentMetadataVisitor.getMkvTrackMetadata(frame.getVal().getTrackNumber());
-                frameProcessor.process(frame.getVal(), trackMetadata);
+                    frameProcessor.process(frame.getVal(), trackMetadata,
+                            fragmentMetadataVisitor.getCurrentFragmentMetadata());
             }
         }
     }

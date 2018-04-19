@@ -84,6 +84,13 @@ with the AWS SDK for the Kinesis Video. This example provides examples for
     * It has been tested not only for streams ingested by `PutMediaWorker` but also streams sent to Kinesis Video Streams using GStreamer Demo application (https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp)    
  
 ## Release Notes
+
+### Release 1.0.4 (April 2018)
+* Add example for KinesisVideo Streams integration with Rekognition and draw Bounding Boxes for every sampled frame.
+* Fix for stream ending before reporting tags visited.
+* Same test data file for parsing and rendering example.
+* Known Issues:  In `KinesisVideoRekognitionIntegrationExample`, the decode/renderer sample using JCodec may not be able to decode all mkv files.
+
 ### Release 1.0.3 (Februrary 2018)
 *  In OutputSegmentMerger, make sure that the lastClusterTimecode is updated for the first fragment.
 If timecode is equal to that of a previous cluster, stop merging

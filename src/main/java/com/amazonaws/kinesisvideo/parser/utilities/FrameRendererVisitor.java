@@ -13,6 +13,10 @@ See the License for the specific language governing permissions and limitations 
 */
 package com.amazonaws.kinesisvideo.parser.utilities;
 
+import java.awt.image.BufferedImage;
+import java.nio.ByteBuffer;
+import java.util.List;
+
 import com.amazonaws.kinesisvideo.parser.examples.KinesisVideoFrameViewer;
 import com.amazonaws.kinesisvideo.parser.mkv.Frame;
 import com.amazonaws.kinesisvideo.parser.mkv.MkvElementVisitor;
@@ -27,11 +31,6 @@ import org.jcodec.common.model.Picture;
 import org.jcodec.scale.AWTUtil;
 import org.jcodec.scale.Transform;
 import org.jcodec.scale.Yuv420jToRgb;
-
-import java.awt.image.BufferedImage;
-import java.nio.ByteBuffer;
-import java.util.List;
-
 
 import static org.jcodec.codecs.h264.H264Utils.splitMOVPacket;
 

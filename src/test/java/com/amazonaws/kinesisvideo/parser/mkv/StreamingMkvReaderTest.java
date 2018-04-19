@@ -53,7 +53,7 @@ public class StreamingMkvReaderTest {
                 new StreamingMkvReader(false, new ArrayList<>(), parserByteSource);
 
         CountVisitor visitor = readAllReturnedElements(streamReader);
-        assertCountsOfTypes(visitor, 1, 5, 300, 3);
+        assertCountsOfTypes(visitor, 1, 8, 444, 1);
     }
 
     @Test
@@ -64,7 +64,7 @@ public class StreamingMkvReaderTest {
 
         CountVisitor visitor = readAllReturnedElements(streamReader);
 
-        assertCountsOfTypes(visitor, 1, 5, 300, 3);
+        assertCountsOfTypes(visitor, 1, 8, 444, 1);
     }
 
     private void assertCountsOfTypes(CountVisitor visitor,
@@ -161,7 +161,7 @@ public class StreamingMkvReaderTest {
                 new StreamingMkvReader(true, mkvTypeInfosToRead, parserByteSource);
 
         CountVisitor visitor = readAllReturnedElements(streamReader);
-        Assert.assertEquals(300, visitor.getCount(MkvTypeInfos.SIMPLEBLOCK));
+        Assert.assertEquals(444, visitor.getCount(MkvTypeInfos.SIMPLEBLOCK));
     }
 
     @Test

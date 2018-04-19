@@ -13,6 +13,11 @@ See the License for the specific language governing permissions and limitations 
 */
 package com.amazonaws.kinesisvideo.parser.utilities;
 
+import java.awt.image.BufferedImage;
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.Optional;
+
 import com.amazonaws.kinesisvideo.parser.examples.KinesisVideoFrameViewer;
 import com.amazonaws.kinesisvideo.parser.mkv.Frame;
 import lombok.Getter;
@@ -24,10 +29,6 @@ import org.jcodec.common.model.Picture;
 import org.jcodec.scale.AWTUtil;
 import org.jcodec.scale.Transform;
 import org.jcodec.scale.Yuv420jToRgb;
-
-import java.awt.image.BufferedImage;
-import java.nio.ByteBuffer;
-import java.util.List;
 
 import static org.jcodec.codecs.h264.H264Utils.splitMOVPacket;
 
@@ -43,7 +44,7 @@ public class H264FrameRenderer implements FrameVisitor.FrameProcessor {
 
     private byte[] codecPrivateData;
 
-    private H264FrameRenderer(KinesisVideoFrameViewer kinesisVideoFrameViewer) {
+    protected H264FrameRenderer(final KinesisVideoFrameViewer kinesisVideoFrameViewer) {
         this.kinesisVideoFrameViewer = kinesisVideoFrameViewer;
         this.kinesisVideoFrameViewer.setVisible(true);
     }
@@ -53,7 +54,12 @@ public class H264FrameRenderer implements FrameVisitor.FrameProcessor {
     }
 
     @Override
-    public void process(Frame frame, MkvTrackMetadata trackMetadata) {
+    public void process(Frame frame, MkvTrackMetadata trackMetadata, Optional<FragmentMetadata> fragmentMetadata) {
+        final BufferedImage bufferedImage = decodeH264Frame(frame, trackMetadata);
+        kinesisVideoFrameViewer.update(bufferedImage);
+    }
+
+    protected BufferedImage decodeH264Frame(Frame frame, MkvTrackMetadata trackMetadata) {
         ByteBuffer frameBuffer = frame.getFrameData();
         int pixelWidth = trackMetadata.getPixelWidth().get().intValue();
         int pixelHeight = trackMetadata.getPixelHeight().get().intValue();
@@ -63,7 +69,7 @@ public class H264FrameRenderer implements FrameVisitor.FrameProcessor {
         // See: https://www.matroska.org/technical/specs/index.html#simpleblock_structure
 
         Picture rgb = Picture.create(pixelWidth, pixelHeight, ColorSpace.RGB);
-        BufferedImage renderImage = new BufferedImage(pixelWidth, pixelHeight, BufferedImage.TYPE_3BYTE_BGR);
+        BufferedImage bufferedImage = new BufferedImage(pixelWidth, pixelHeight, BufferedImage.TYPE_3BYTE_BGR);
         AvcCBox avcC = AvcCBox.parseAvcCBox(ByteBuffer.wrap(codecPrivateData));
 
         decoder.addSps(avcC.getSpsList());
@@ -84,10 +90,10 @@ public class H264FrameRenderer implements FrameVisitor.FrameProcessor {
 
             Picture tmpBuf = Picture.createPicture(pixelWidth, pixelHeight, dataTemp, ColorSpace.YUV420J);
             transform.transform(tmpBuf, rgb);
-            AWTUtil.toBufferedImage(rgb, renderImage);
-            kinesisVideoFrameViewer.update(renderImage);
+            AWTUtil.toBufferedImage(rgb, bufferedImage);
             frameCount++;
         }
+        return bufferedImage;
     }
 
     public ByteBuffer getCodecPrivateData() {

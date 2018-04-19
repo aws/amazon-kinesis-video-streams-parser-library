@@ -13,31 +13,42 @@ See the License for the specific language governing permissions and limitations 
 */
 package com.amazonaws.kinesisvideo.parser.examples;
 
-import javax.swing.*;
-
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
 
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-
-import javax.swing.JPanel;
+import javax.swing.JFrame;
 
 public class KinesisVideoFrameViewer extends JFrame {
-    private final ImagePanel panel;
+    private final int width;
+    private final int height;
+    private final String title;
+
+    protected ImagePanel panel;
+
+    protected KinesisVideoFrameViewer(int width, int height, String title) {
+        this.width = width;
+        this.height = height;
+        this.title = title;
+        this.setTitle(title);
+        this.setBackground(Color.BLACK);
+    }
 
     public KinesisVideoFrameViewer(int width, int height) {
-        this.setTitle("Kinesis Video Frame  Viewer Sample");
-        this.setBackground(Color.BLACK);
+        this(width, height, "Kinesis Video Frame Viewer ");
         panel = new ImagePanel();
+        addImagePanel(panel);
+    }
+
+    protected void addImagePanel(final ImagePanel panel) {
         panel.setPreferredSize(new Dimension(width, height));
         this.add(panel);
         this.pack();
         addWindowListener(new WindowAdapter() {
             public void windowClosing(WindowEvent e) {
-                System.out.println("Kinesis video viewer frame closed");
+                System.out.println(title + " closed");
                 System.exit(0);
             }
         });
@@ -48,21 +59,3 @@ public class KinesisVideoFrameViewer extends JFrame {
     }
 }
 
-class ImagePanel extends JPanel {
-    private BufferedImage image;
-
-    @Override
-    public void paintComponent(Graphics g) {
-        Graphics2D g2 = (Graphics2D) g;
-        if (image != null) {
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.clearRect(0, 0, image.getWidth(), image.getHeight());
-            g2.drawImage(image, 0, 0, image.getWidth(), image.getHeight(), null);
-        }
-    }
-
-    public void setImage(BufferedImage bufferedImage) {
-        image = bufferedImage;
-        repaint();
-    }
-}
