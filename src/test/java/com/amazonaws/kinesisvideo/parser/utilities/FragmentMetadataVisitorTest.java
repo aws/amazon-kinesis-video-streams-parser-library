@@ -31,8 +31,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Test class to test {@link FragmentMetadataVisitor}.
@@ -126,6 +129,34 @@ public class FragmentMetadataVisitorTest {
             }
         }
 
+    }
+    
+    @Test
+    public void testFragmentNumbers_NoClusterData() throws IOException, MkvElementVisitException {
+        FragmentMetadataVisitor fragmentVisitor = FragmentMetadataVisitor.create();
+        String testFile = "empty-mkv-with-tags.mkv";        
+        Set<String> expectedFragmentNumbers = new HashSet<>(
+                Arrays.asList(
+                        "91343852338378294813695855977007281634605393997"
+                        ));
+        
+        final InputStream inputStream = TestResourceUtil.getTestInputStream(testFile);
+        Set<String> visitedFragmentNumbers = new HashSet<>(); 
+        StreamingMkvReader mkvStreamReader =
+                StreamingMkvReader.createDefault(new InputStreamParserByteSource(inputStream));
+        while (mkvStreamReader.mightHaveNext()) {
+            Optional<MkvElement> mkvElement = mkvStreamReader.nextIfAvailable();
+            if (mkvElement.isPresent()) {
+                mkvElement.get().accept(fragmentVisitor);
+                Optional<FragmentMetadata> fragmentMetadata = fragmentVisitor.getCurrentFragmentMetadata();
+                if (fragmentMetadata.isPresent()) {
+                    String fragmentNumber = fragmentMetadata.get().getFragmentNumberString();
+                    visitedFragmentNumbers.add(fragmentNumber);
+                }
+            }
+        }
+        
+        Assert.assertEquals(expectedFragmentNumbers, visitedFragmentNumbers);
     }
 
     private static class TestCompositeVisitor extends CompositeMkvElementVisitor {
