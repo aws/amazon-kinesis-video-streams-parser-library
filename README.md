@@ -70,7 +70,7 @@ Implementations of the process method of this interface should block until all t
  The process method can be implemented using a combination of the visitors described earlier.
  
 ### MergedOutputPiper
-The `MergedOutputPiper` extends `GetMediaResponseStreamConsumer` to merges consecutive mkv streams in the output of GetMedia
+The `MergedOutputPiper` extends `GetMediaResponseStreamConsumer` to merge consecutive mkv streams in the output of GetMedia
  and pipes the merged stream to the stdin of a child process. It is meant to be used to pipe the output of a GetMedia* call to a processing application that can not deal
 with having multiple consecutive mkv streams. Gstreamer is one such application that requires a merged stream.
 
@@ -104,6 +104,13 @@ with the AWS SDK for the Kinesis Video. This example provides examples for
  The Gstreamer pipeline is a toy example that demonstrates that Gstreamer can parse the mkv passed into it. 
 
 ## Release Notes
+
+### Release 1.0.5 (May 2018)
+* Introduce `GetMediaResponseStreamConsumer` as an abstract class used to consume the output of a GetMedia* call 
+to Kinesis Video in a streaming fashion. Child classes will use visitors to implement different consumers.
+* The `MergedOutputPiper` extends `GetMediaResponseStreamConsumer` to merge consecutive mkv streams in the output of GetMedia
+   and pipes the merged stream to the stdin of a child process. 
+* Add the capability and example to pipe the output of GetMedia calls to GStreamer using `MergedOutputPiper`. 
 
 ### Release 1.0.4 (April 2018)
 * Add example for KinesisVideo Streams integration with Rekognition and draw Bounding Boxes for every sampled frame.
