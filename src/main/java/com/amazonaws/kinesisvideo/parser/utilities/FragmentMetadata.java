@@ -15,6 +15,7 @@ package com.amazonaws.kinesisvideo.parser.utilities;
 
 import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.ToString;
 import org.apache.commons.lang3.Validate;
 
@@ -22,12 +23,14 @@ import java.math.BigInteger;
 import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.concurrent.TimeUnit;
 
 /**
  * Metadata for a Kinesis Video Fragment.
  */
-@Getter @ToString
+@Getter
+@ToString
 public class FragmentMetadata {
     private static final String FRAGMENT_NUMBER_KEY = "AWS_KINESISVIDEO_FRAGMENT_NUMBER";
     private static final String SERVER_SIDE_TIMESTAMP_KEY = "AWS_KINESISVIDEO_SERVER_TIMESTAMP";
@@ -44,6 +47,11 @@ public class FragmentMetadata {
     private final boolean success;
     private final long errorId;
     private final String errorCode;
+
+    @Setter
+    private OptionalLong millisBehindNow = OptionalLong.empty();
+    @Setter
+    private Optional<String> continuationToken = Optional.empty();
 
     private FragmentMetadata(String fragmentNumberString,
             double serverSideTimestampSeconds,
@@ -106,4 +114,7 @@ public class FragmentMetadata {
         return new Date(this.producerSideTimestampMillis);
     }
 
+    public boolean isCompleteFragment() {
+        return millisBehindNow.isPresent() && continuationToken.isPresent();
+    }
 }

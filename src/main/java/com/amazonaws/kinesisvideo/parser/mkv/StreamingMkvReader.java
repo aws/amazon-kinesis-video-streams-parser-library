@@ -135,7 +135,7 @@ public class StreamingMkvReader {
      * @throws MkvElementVisitException If the visitor fails.
      */
     public void apply(MkvElementVisitor visitor) throws MkvElementVisitException {
-        while (this.mightHaveNext()) {
+        while (this.mightHaveNext() && !visitor.isDone()) {
             Optional<MkvElement> mkvElementOptional = this.nextIfAvailable();
             if (mkvElementOptional.isPresent()) {
                 mkvElementOptional.get().accept(visitor);

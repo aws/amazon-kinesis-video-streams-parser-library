@@ -16,7 +16,6 @@ package com.amazonaws.kinesisvideo.parser.examples;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.kinesisvideo.parser.ebml.InputStreamParserByteSource;
-import com.amazonaws.kinesisvideo.parser.mkv.MkvElement;
 import com.amazonaws.kinesisvideo.parser.mkv.MkvElementVisitException;
 import com.amazonaws.kinesisvideo.parser.mkv.MkvElementVisitor;
 import com.amazonaws.kinesisvideo.parser.mkv.StreamingMkvReader;
@@ -29,10 +28,7 @@ import com.amazonaws.services.kinesisvideo.model.GetDataEndpointRequest;
 import com.amazonaws.services.kinesisvideo.model.GetMediaRequest;
 import com.amazonaws.services.kinesisvideo.model.GetMediaResult;
 import com.amazonaws.services.kinesisvideo.model.StartSelector;
-import com.amazonaws.services.kinesisvideo.model.StartSelectorType;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.Optional;
 
 /**
  * Worker used to make a GetMedia call to Kinesis Video and stream in data and parse it and apply a visitor.

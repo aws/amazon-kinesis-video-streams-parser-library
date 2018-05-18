@@ -27,18 +27,12 @@ import com.amazonaws.kinesisvideo.parser.utilities.OutputSegmentMerger;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideo;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoClientBuilder;
-import com.amazonaws.services.kinesisvideo.model.CreateStreamRequest;
-import com.amazonaws.services.kinesisvideo.model.DeleteStreamRequest;
-import com.amazonaws.services.kinesisvideo.model.DescribeStreamRequest;
-import com.amazonaws.services.kinesisvideo.model.ResourceNotFoundException;
 import com.amazonaws.services.kinesisvideo.model.StartSelector;
 import com.amazonaws.services.kinesisvideo.model.StartSelectorType;
-import com.amazonaws.services.kinesisvideo.model.StreamInfo;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.Validate;
 
 import java.io.BufferedOutputStream;
 import java.io.Closeable;
@@ -48,11 +42,9 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Predicate;
 
 /**
  * Example for integrating with Kinesis Video.
