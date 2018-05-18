@@ -335,11 +335,7 @@ public class OutputSegmentMergerTest {
     }
 
     private static CountVisitor getCountVisitor() {
-        List<EBMLTypeInfo> typesToCountList = new ArrayList<>();
-        typesToCountList.add(MkvTypeInfos.CLUSTER);
-        typesToCountList.add(MkvTypeInfos.SEGMENT);
-        typesToCountList.add(MkvTypeInfos.SIMPLEBLOCK);
-        return new CountVisitor(typesToCountList);
+        return CountVisitor.create(MkvTypeInfos.CLUSTER, MkvTypeInfos.SEGMENT, MkvTypeInfos.SIMPLEBLOCK);
     }
 
     @Test

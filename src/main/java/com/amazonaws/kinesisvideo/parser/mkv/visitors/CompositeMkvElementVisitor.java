@@ -57,6 +57,11 @@ public class CompositeMkvElementVisitor extends MkvElementVisitor {
         visitAll(dataElement);
     }
 
+    @Override
+    public boolean isDone() {
+        return childVisitors.stream().anyMatch(MkvElementVisitor::isDone);
+    }
+
     private void visitAll(MkvElement element) throws MkvElementVisitException {
         try {
             for (MkvElementVisitor childVisitor : childVisitors) {

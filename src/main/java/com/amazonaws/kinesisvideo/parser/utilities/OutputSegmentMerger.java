@@ -143,11 +143,7 @@ public class OutputSegmentMerger extends CompositeMkvElementVisitor {
     }
 
     private static CountVisitor getCountVisitor() {
-        List<EBMLTypeInfo> typesToCountList = new ArrayList<>();
-        typesToCountList.add(MkvTypeInfos.CLUSTER);
-        typesToCountList.add(MkvTypeInfos.SEGMENT);
-        typesToCountList.add(MkvTypeInfos.SIMPLEBLOCK);
-        return new CountVisitor(typesToCountList);
+        return CountVisitor.create(MkvTypeInfos.CLUSTER, MkvTypeInfos.SEGMENT, MkvTypeInfos.SIMPLEBLOCK);
     }
 
 
@@ -163,6 +159,7 @@ public class OutputSegmentMerger extends CompositeMkvElementVisitor {
         return countVisitor.getCount(MkvTypeInfos.SIMPLEBLOCK);
     }
 
+    @Override
     public boolean isDone() {
         return MergeState.DONE == state;
     }
@@ -229,9 +226,19 @@ public class OutputSegmentMerger extends CompositeMkvElementVisitor {
 
                 }
             } catch(IOException ie) {
-                throw new MkvElementVisitException("IOException in merge visitor", ie);
+                wrapIOException(ie);
             }
 
+        }
+
+        private void wrapIOException(IOException ie) throws MkvElementVisitException {
+            String exceptionMessage = "IOException in merge visitor ";
+            if (lastClusterTimecode.isPresent()) {
+                exceptionMessage += "in or immediately after cluster with timecode "+lastClusterTimecode.get();
+            } else {
+                exceptionMessage += "in first cluster";
+            }
+            throw new MkvElementVisitException(exceptionMessage, ie);
         }
 
         @Override
@@ -308,8 +315,13 @@ public class OutputSegmentMerger extends CompositeMkvElementVisitor {
                 }
 
             } catch (IOException ie) {
-                throw new MkvElementVisitException("IOException in merge visitor", ie);
+                wrapIOException(ie);
             }
+        }
+
+        @Override
+        public boolean isDone() {
+            return MergeState.DONE == state;
         }
     }
 

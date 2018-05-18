@@ -194,10 +194,12 @@ public class FragmentMetadataVisitor extends CompositeMkvElementVisitor {
         String millisBehindString = tagNameToTagValueMap.get(MILLIS_BEHIND_NOW_KEY);
         if (millisBehindString != null) {
             millisBehindNow = (OptionalLong.of(Long.parseLong(millisBehindString)));
+            currentFragmentMetadata.ifPresent(f -> f.setMillisBehindNow(millisBehindNow));
         }
         String continutationTokenString = tagNameToTagValueMap.get(CONTINUATION_TOKEN_KEY);
         if (continutationTokenString != null) {
             continuationToken = Optional.of(continutationTokenString);
+            currentFragmentMetadata.ifPresent(f -> f.setContinuationToken(continuationToken));
         }
     }
 

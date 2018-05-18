@@ -48,11 +48,8 @@ public class FrameRendererTest {
         StreamingMkvReader mkvStreamReader =
                 StreamingMkvReader.createDefault(new InputStreamParserByteSource(in));
 
-        List<EBMLTypeInfo> typesToCount = new ArrayList<>();
-        typesToCount.add(MkvTypeInfos.CLUSTER);
-        typesToCount.add(MkvTypeInfos.SIMPLEBLOCK);
-        typesToCount.add(MkvTypeInfos.TRACKS);
-        CountVisitor countVisitor = new CountVisitor(typesToCount);
+        CountVisitor countVisitor =
+                CountVisitor.create(MkvTypeInfos.CLUSTER, MkvTypeInfos.SEGMENT, MkvTypeInfos.SIMPLEBLOCK);
 
         mkvStreamReader.apply(new CompositeMkvElementVisitor(countVisitor, FrameVisitor.create(frameRenderer)));
 

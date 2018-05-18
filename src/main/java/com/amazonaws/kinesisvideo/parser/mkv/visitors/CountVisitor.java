@@ -21,6 +21,7 @@ import com.amazonaws.kinesisvideo.parser.mkv.MkvEndMasterElement;
 import com.amazonaws.kinesisvideo.parser.mkv.MkvStartMasterElement;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -44,6 +45,14 @@ public class CountVisitor extends MkvElementVisitor {
         this.typesToCount.stream()
                 .filter(t -> t.getType().equals(EBMLTypeInfo.TYPE.MASTER))
                 .forEach(t -> endMasterCount.put(t, 0));
+    }
+
+    public static CountVisitor create(EBMLTypeInfo... typesToCount) {
+        List<EBMLTypeInfo> typeInfoList = new ArrayList<>();
+        for (EBMLTypeInfo typeToCount : typesToCount) {
+            typeInfoList.add(typeToCount);
+        }
+        return new CountVisitor(typeInfoList);
     }
 
     @Override

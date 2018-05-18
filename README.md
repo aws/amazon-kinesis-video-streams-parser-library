@@ -59,6 +59,22 @@ visited `MkvElement` for each constituent visitor in the order in which the visi
 
 `CopyVisitor` is a visitor used to copy the raw bytes of the Mkv elements in a stream to an output stream.
 
+## ResponseStreamConsumers
+The `GetMediaResponseStreamConsumer` is an abstract class used to consume the output of a GetMedia* call to Kinesis Video in a streaming fashion.
+It supports a single abstract method called process that is invoked to process the streaming payload of a GetMedia response.
+The first parameter for process method is the payload inputStream in a GetMediaResult returned by a call to GetMedia.
+Implementations of the process method of this interface should block until all the data in the inputStream has been
+ processed or the process method decides to stop for some other reason. The second argument is a FragmentMetadataCallback 
+ which is invoked at the end of every processed fragment. The `GetMediaResponseStreamConsumer` provides a utility method 
+ `processWithFragmentEndCallbacks` that can be used by child classes to  implement the end of fragment callbacks.
+ The process method can be implemented using a combination of the visitors described earlier.
+ 
+### MergedOutputPiper
+The `MergedOutputPiper` extends `GetMediaResponseStreamConsumer` to merges consecutive mkv streams in the output of GetMedia
+ and pipes the merged stream to the stdin of a child process. It is meant to be used to pipe the output of a GetMedia* call to a processing application that can not deal
+with having multiple consecutive mkv streams. Gstreamer is one such application that requires a merged stream.
+
+
 ## Example
 * `KinesisVideoExample` is an example that shows how the `StreamingMkvReader` and the different visitors can be integrated 
 with the AWS SDK for the Kinesis Video. This example provides examples for
@@ -82,7 +98,11 @@ with the AWS SDK for the Kinesis Video. This example provides examples for
     }
     ``` 
     * It has been tested not only for streams ingested by `PutMediaWorker` but also streams sent to Kinesis Video Streams using GStreamer Demo application (https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp)    
- 
+
+* `KinesisVideoGStreamerPiperExample` is an example for continuously piping the output of GetMedia calls from a Kinesis Video stream to GStreamer.
+ The test `KinesisVideoGStreamerPiperExampleTest` provides an example that pipes the output of a KVS GetMedia call to a Gstreamer pipeline.
+ The Gstreamer pipeline is a toy example that demonstrates that Gstreamer can parse the mkv passed into it. 
+
 ## Release Notes
 
 ### Release 1.0.4 (April 2018)
