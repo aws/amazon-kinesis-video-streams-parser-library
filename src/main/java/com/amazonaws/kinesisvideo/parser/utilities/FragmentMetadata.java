@@ -94,11 +94,12 @@ public class FragmentMetadata {
             return new FragmentMetadata(getValueForTag(tagNameToTagValueMap, FRAGMENT_NUMBER_KEY),
                     Double.parseDouble(getValueForTag(tagNameToTagValueMap, SERVER_SIDE_TIMESTAMP_KEY)),
                     Double.parseDouble(getValueForTag(tagNameToTagValueMap, PRODCUER_SIDE_TIMESTAMP_KEY)));
-        } else {
+        } else if (tagNameToTagValueMap.containsKey(FRAGMENT_NUMBER_KEY)) {
             return new FragmentMetadata(getValueForTag(tagNameToTagValueMap, FRAGMENT_NUMBER_KEY),
                     Long.parseLong(getValueForTag(tagNameToTagValueMap, ERROR_ID_KEY)),
                     getValueForTag(tagNameToTagValueMap, ERROR_CODE_KEY));
         }
+        return null;
     }
 
     private static String getValueForTag(Map<String, String> tagNameToTagValueMap, String tagName) {

@@ -33,18 +33,12 @@ import org.jcodec.scale.Yuv420jToRgb;
 import static org.jcodec.codecs.h264.H264Utils.splitMOVPacket;
 
 @Slf4j
-public class H264FrameRenderer implements FrameVisitor.FrameProcessor {
+public class H264FrameRenderer extends H264FrameDecoder {
 
     private final KinesisVideoFrameViewer kinesisVideoFrameViewer;
-    private final H264Decoder decoder = new H264Decoder();
-    private final Transform transform = new Yuv420jToRgb();
-
-    @Getter
-    private int frameCount;
-
-    private byte[] codecPrivateData;
 
     protected H264FrameRenderer(final KinesisVideoFrameViewer kinesisVideoFrameViewer) {
+        super();
         this.kinesisVideoFrameViewer = kinesisVideoFrameViewer;
         this.kinesisVideoFrameViewer.setVisible(true);
     }
@@ -58,46 +52,4 @@ public class H264FrameRenderer implements FrameVisitor.FrameProcessor {
         final BufferedImage bufferedImage = decodeH264Frame(frame, trackMetadata);
         kinesisVideoFrameViewer.update(bufferedImage);
     }
-
-    protected BufferedImage decodeH264Frame(Frame frame, MkvTrackMetadata trackMetadata) {
-        ByteBuffer frameBuffer = frame.getFrameData();
-        int pixelWidth = trackMetadata.getPixelWidth().get().intValue();
-        int pixelHeight = trackMetadata.getPixelHeight().get().intValue();
-        codecPrivateData = trackMetadata.getCodecPrivateData().array();
-        log.debug("Decoding frames ... ");
-        // Read the bytes that appear to comprise the header
-        // See: https://www.matroska.org/technical/specs/index.html#simpleblock_structure
-
-        Picture rgb = Picture.create(pixelWidth, pixelHeight, ColorSpace.RGB);
-        BufferedImage bufferedImage = new BufferedImage(pixelWidth, pixelHeight, BufferedImage.TYPE_3BYTE_BGR);
-        AvcCBox avcC = AvcCBox.parseAvcCBox(ByteBuffer.wrap(codecPrivateData));
-
-        decoder.addSps(avcC.getSpsList());
-        decoder.addPps(avcC.getPpsList());
-
-        Picture buf = Picture.create(pixelWidth, pixelHeight, ColorSpace.YUV420J);
-        List<ByteBuffer> byteBuffers = splitMOVPacket(frameBuffer, avcC);
-        Picture pic = decoder.decodeFrameFromNals(byteBuffers, buf.getData());
-
-        if (pic != null) {
-            // Work around for color issues in JCodec
-            // https://github.com/jcodec/jcodec/issues/59
-            // https://github.com/jcodec/jcodec/issues/192
-            byte[][] dataTemp = new byte[3][pic.getData().length];
-            dataTemp[0] = pic.getPlaneData(0);
-            dataTemp[1] = pic.getPlaneData(2);
-            dataTemp[2] = pic.getPlaneData(1);
-
-            Picture tmpBuf = Picture.createPicture(pixelWidth, pixelHeight, dataTemp, ColorSpace.YUV420J);
-            transform.transform(tmpBuf, rgb);
-            AWTUtil.toBufferedImage(rgb, bufferedImage);
-            frameCount++;
-        }
-        return bufferedImage;
-    }
-
-    public ByteBuffer getCodecPrivateData() {
-        return ByteBuffer.wrap(codecPrivateData);
-    }
-
 }

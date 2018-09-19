@@ -105,12 +105,17 @@ with the AWS SDK for the Kinesis Video. This example provides examples for
 
 ## Release Notes
 
+### Release 1.0.6 (Sep 2018)
+* Introduce handling for empty fragment metadata
+* Added a new SimpleFrame Visitor to handle video with no tags
+* Refactored H264FrameDecoder, so that base class method can be reused by child class
+
 ### Release 1.0.5 (May 2018)
-* Introduce `GetMediaResponseStreamConsumer` as an abstract class used to consume the output of a GetMedia* call 
+* Introduce `GetMediaResponseStreamConsumer` as an abstract class used to consume the output of a GetMedia* call
 to Kinesis Video in a streaming fashion. Child classes will use visitors to implement different consumers.
 * The `MergedOutputPiper` extends `GetMediaResponseStreamConsumer` to merge consecutive mkv streams in the output of GetMedia
-   and pipes the merged stream to the stdin of a child process. 
-* Add the capability and example to pipe the output of GetMedia calls to GStreamer using `MergedOutputPiper`. 
+   and pipes the merged stream to the stdin of a child process.
+* Add the capability and example to pipe the output of GetMedia calls to GStreamer using `MergedOutputPiper`.
 
 ### Release 1.0.4 (April 2018)
 * Add example for KinesisVideo Streams integration with Rekognition and draw Bounding Boxes for every sampled frame.
