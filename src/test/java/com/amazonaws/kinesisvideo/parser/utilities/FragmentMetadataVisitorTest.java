@@ -51,7 +51,7 @@ public class FragmentMetadataVisitorTest {
         continuationTokens.add("91343852333181432397633822764885441725874549018");
         continuationTokens.add("91343852333181432402585582922026963247510532162");
 
-        FragmentMetadataVisitor fragmentVisitor = FragmentMetadataVisitor.create();
+        final FragmentMetadataVisitor fragmentVisitor = FragmentMetadataVisitor.create();
         StreamingMkvReader mkvStreamReader =
                 StreamingMkvReader.createDefault(new InputStreamParserByteSource(in));
         int segmentCount = 0;
@@ -102,7 +102,7 @@ public class FragmentMetadataVisitorTest {
 
     @Test
     public void withOutputSegmentMergerTest() throws IOException, MkvElementVisitException {
-        FragmentMetadataVisitor fragmentVisitor = FragmentMetadataVisitor.create();
+        final FragmentMetadataVisitor fragmentVisitor = FragmentMetadataVisitor.create();
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
@@ -133,7 +133,7 @@ public class FragmentMetadataVisitorTest {
     
     @Test
     public void testFragmentNumbers_NoClusterData() throws IOException, MkvElementVisitException {
-        FragmentMetadataVisitor fragmentVisitor = FragmentMetadataVisitor.create();
+        final FragmentMetadataVisitor fragmentVisitor = FragmentMetadataVisitor.create();
         String testFile = "empty-mkv-with-tags.mkv";        
         Set<String> expectedFragmentNumbers = new HashSet<>(
                 Arrays.asList(
@@ -157,6 +157,46 @@ public class FragmentMetadataVisitorTest {
         }
         
         Assert.assertEquals(expectedFragmentNumbers, visitedFragmentNumbers);
+    }
+
+    @Test
+    public void testFragmentMetadata_NoFragementMetadata_withWebm() throws IOException, MkvElementVisitException {
+        final FragmentMetadataVisitor fragmentMetadataVisitor = FragmentMetadataVisitor.create();
+        final String testFile = "big-buck-bunny_trailer.webm";
+        int metadataCount = 0;
+        final StreamingMkvReader mkvStreamReader =  StreamingMkvReader
+                        .createDefault(new InputStreamParserByteSource(TestResourceUtil.getTestInputStream(testFile)));
+        while (mkvStreamReader.mightHaveNext()) {
+            Optional<MkvElement> mkvElement = mkvStreamReader.nextIfAvailable();
+            if (mkvElement.isPresent()) {
+                mkvElement.get().accept(fragmentMetadataVisitor);
+                Optional<FragmentMetadata> fragmentMetadata = fragmentMetadataVisitor.getCurrentFragmentMetadata();
+                if(fragmentMetadata.isPresent()) {
+                    metadataCount ++;
+                }
+            }
+        }
+        Assert.assertEquals(0, metadataCount);
+    }
+
+    @Test
+    public void testFragmentMetadata_NoFragementMetadata_withMkv() throws IOException, MkvElementVisitException {
+        final FragmentMetadataVisitor fragmentMetadataVisitor = FragmentMetadataVisitor.create();
+        final String testFile = "clusters.mkv";
+        int metadataCount = 0;
+        final StreamingMkvReader mkvStreamReader =  StreamingMkvReader
+                .createDefault(new InputStreamParserByteSource(TestResourceUtil.getTestInputStream(testFile)));
+        while (mkvStreamReader.mightHaveNext()) {
+            Optional<MkvElement> mkvElement = mkvStreamReader.nextIfAvailable();
+            if (mkvElement.isPresent()) {
+                mkvElement.get().accept(fragmentMetadataVisitor);
+                Optional<FragmentMetadata> fragmentMetadata = fragmentMetadataVisitor.getCurrentFragmentMetadata();
+                if(fragmentMetadata.isPresent()) {
+                    metadataCount ++;
+                }
+            }
+        }
+        Assert.assertEquals(0, metadataCount);
     }
 
     private static class TestCompositeVisitor extends CompositeMkvElementVisitor {

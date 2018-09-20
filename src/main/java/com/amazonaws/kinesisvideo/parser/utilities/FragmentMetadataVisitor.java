@@ -207,7 +207,7 @@ public class FragmentMetadataVisitor extends CompositeMkvElementVisitor {
     private void collectPreClusterInfo() {
         final Map<String, String> tagNameToTagValueMap = getTagNameToValueMap();
 
-        currentFragmentMetadata = Optional.of(FragmentMetadata.createFromtagNametoValueMap(tagNameToTagValueMap));
+        currentFragmentMetadata = Optional.ofNullable(FragmentMetadata.createFromtagNametoValueMap(tagNameToTagValueMap));
 
         final Map<Long, List<MkvElement>> trackEntryElementNumberToMkvElement = getTrackEntryMap();
         trackEntryElementNumberToMkvElement.values().stream().forEach(this::createTrackMetadata);
