@@ -30,6 +30,22 @@ public class KinesisVideoRendererExampleTest {
                 .streamName("render-example-stream")
                 .credentialsProvider(new ProfileCredentialsProvider())
                 .inputVideoStream(TestResourceUtil.getTestInputStream("clusters.mkv"))
+                .renderFragmentMetadata(false)
+                .build();
+
+        example.execute();
+    }
+
+    @Ignore
+    @Test
+    public void testConsumerExample() throws InterruptedException, IOException {
+        KinesisVideoRendererExample example = KinesisVideoRendererExample.builder().region(Regions.US_WEST_2)
+                .streamName("render-example-stream")
+                .credentialsProvider(new ProfileCredentialsProvider())
+                // Display the tags in the frame viewer window
+                .renderFragmentMetadata(true)
+                // Use existing stream in KVS (with Producer sending)
+                .noSampleInputRequired(true)
                 .build();
 
         example.execute();

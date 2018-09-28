@@ -104,6 +104,9 @@ with the AWS SDK for the Kinesis Video. This example provides examples for
  The Gstreamer pipeline is a toy example that demonstrates that Gstreamer can parse the mkv passed into it. 
 
 ## Release Notes
+### Release 1.0.7 (Sep 2018)
+* Add flag in KinesisVideoRendererExample and KinesisVideoExample to use the existing stream (and not doing PutMedia again if it exists already).
+* Added support to retrieve the information from FragmentMetadata and display in the image panel during rendering.
 
 ### Release 1.0.6 (Sep 2018)
 * Introduce handling for empty fragment metadata

@@ -20,6 +20,8 @@ import org.apache.commons.lang3.Validate;
 import java.nio.ByteBuffer;
 import java.util.Optional;
 
+import static com.amazonaws.kinesisvideo.parser.ebml.EBMLUtils.UNKNOWN_LENGTH_VALUE;
+
 /**
  * This class is used by the parser to represent an EBML Element internally.
  */
@@ -27,12 +29,9 @@ import java.util.Optional;
 class EBMLParserInternalElement {
     enum ElementReadState { NEW, ID_DONE, SIZE_DONE, CONTENT_READING, CONTENT_SKIPPING, FINISHED }
 
-    static final long UNKNOWN_LENGTH_VALUE = 0xFFFFFFFFFFFFFFL;
-
     private final long startingOffset;
     @Getter
     private final long elementCount;
-
 
     ElementReadState currentElementReadState = ElementReadState.NEW;
 

@@ -16,7 +16,6 @@ package com.amazonaws.kinesisvideo.parser.utilities;
 import com.amazonaws.kinesisvideo.parser.ebml.EBMLElementMetaData;
 import com.amazonaws.kinesisvideo.parser.ebml.EBMLTypeInfo;
 import com.amazonaws.kinesisvideo.parser.ebml.MkvTypeInfos;
-import com.amazonaws.kinesisvideo.parser.mkv.visitors.CompositeMkvElementVisitor;
 import com.amazonaws.kinesisvideo.parser.mkv.MkvDataElement;
 import com.amazonaws.kinesisvideo.parser.mkv.MkvElement;
 import com.amazonaws.kinesisvideo.parser.mkv.MkvElementVisitException;
@@ -24,8 +23,10 @@ import com.amazonaws.kinesisvideo.parser.mkv.MkvElementVisitor;
 import com.amazonaws.kinesisvideo.parser.mkv.MkvEndMasterElement;
 import com.amazonaws.kinesisvideo.parser.mkv.MkvStartMasterElement;
 import com.amazonaws.kinesisvideo.parser.mkv.MkvValue;
+import com.amazonaws.kinesisvideo.parser.mkv.visitors.CompositeMkvElementVisitor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.Validate;
 
 import java.math.BigInteger;
@@ -63,12 +64,22 @@ public class FragmentMetadataVisitor extends CompositeMkvElementVisitor {
     };
     private static final String AWS_KINESISVIDEO_TAGNAME_PREFIX = "AWS_KINESISVIDEO";
 
+    public interface MkvTagProcessor {
+        default void process(MkvTag mkvTag, Optional<FragmentMetadata> currentFragmentMetadata) {
+            throw new NotImplementedException("Default FragmentMetadataVisitor.MkvTagProcessor");
+        }
+        default void clear() {
+            throw new NotImplementedException("Default FragmentMetadataVisitor.MkvTagProcessor");
+        }
+    }
+
     private final MkvChildElementCollector tagCollector;
     private final MkvChildElementCollector trackCollector;
     private final StateMachineVisitor stateMachineVisitor;
 
-    private final Set<EBMLTypeInfo> trackTypesForTrackMetadata = new HashSet();
+    private final Optional<MkvTagProcessor> mkvTagProcessor;
 
+    private final Set<EBMLTypeInfo> trackTypesForTrackMetadata = new HashSet();
 
     @Getter
     private Optional<FragmentMetadata> previousFragmentMetadata = Optional.empty();
@@ -80,13 +91,15 @@ public class FragmentMetadataVisitor extends CompositeMkvElementVisitor {
 
     private Optional<String> continuationToken = Optional.empty();
 
+    private final Map<BigInteger, MkvTrackMetadata> trackMetadataMap = new HashMap();
 
-
-    private final Map<BigInteger, MkvTrackMetadata> trackMetadataMap = new HashMap<BigInteger,MkvTrackMetadata>();
+    private String tagName = null;
+    private String tagValue = null;
 
     private FragmentMetadataVisitor(List<MkvElementVisitor> childVisitors,
-            MkvChildElementCollector tagCollector,
-            MkvChildElementCollector trackCollector) {
+                                    MkvChildElementCollector tagCollector,
+                                    MkvChildElementCollector trackCollector,
+                                    Optional<MkvTagProcessor> mkvTagProcessor) {
         super(childVisitors);
         Validate.isTrue(tagCollector.getParentTypeInfo().equals(MkvTypeInfos.TAGS));
         Validate.isTrue(trackCollector.getParentTypeInfo().equals(MkvTypeInfos.TRACKS));
@@ -94,19 +107,24 @@ public class FragmentMetadataVisitor extends CompositeMkvElementVisitor {
         this.trackCollector = trackCollector;
         this.stateMachineVisitor = new StateMachineVisitor();
         this.childVisitors.add(stateMachineVisitor);
+        this.mkvTagProcessor = mkvTagProcessor;
         for (EBMLTypeInfo trackType : TRACK_TYPES) {
             this.trackTypesForTrackMetadata.add(trackType);
         }
     }
 
     public static FragmentMetadataVisitor create() {
+        return create(Optional.empty());
+    }
+
+    public static FragmentMetadataVisitor create(Optional<MkvTagProcessor> mkvTagProcessor) {
         final List<MkvElementVisitor> childVisitors = new ArrayList<>();
         final MkvChildElementCollector tagCollector = new MkvChildElementCollector(MkvTypeInfos.TAGS);
         final MkvChildElementCollector trackCollector = new MkvChildElementCollector(MkvTypeInfos.TRACKS);
         childVisitors.add(tagCollector);
         childVisitors.add(trackCollector);
 
-        return new FragmentMetadataVisitor(childVisitors, tagCollector, trackCollector);
+        return new FragmentMetadataVisitor(childVisitors, tagCollector, trackCollector, mkvTagProcessor);
     }
 
     enum State {NEW, PRE_CLUSTER, IN_CLUSTER, POST_CLUSTER}
@@ -158,8 +176,8 @@ public class FragmentMetadataVisitor extends CompositeMkvElementVisitor {
                 default:
                     break;
             }
-            //If any tags section finishes, try to update the millisbehind latest and continuation token
-            //since there can be multiple in the same segment.
+            // If any tags section finishes, try to update the millisbehind latest and continuation token
+            // since there can be multiple in the same segment.
             if (MkvTypeInfos.TAGS.equals(endMasterElement.getElementMetaData().getTypeInfo())) {
                 if (log.isDebugEnabled()) {
                     log.debug("TAGS end {}, potentially updating millisbehindlatest and continuation token",
@@ -171,7 +189,24 @@ public class FragmentMetadataVisitor extends CompositeMkvElementVisitor {
 
         @Override
         public void visit(MkvDataElement dataElement) throws MkvElementVisitException {
+            if (mkvTagProcessor.isPresent()) {
+                if (MkvTypeInfos.TAGNAME.equals(dataElement.getElementMetaData().getTypeInfo())) {
+                    tagName = getMkvElementStringVal(dataElement);
+                } else if (MkvTypeInfos.TAGSTRING.equals(dataElement.getElementMetaData().getTypeInfo())) {
+                    tagValue = getMkvElementStringVal(dataElement);
+                }
 
+                if (tagName != null && tagValue != null) {
+                    // Only process non-internal tags
+                    if (!tagName.startsWith(AWS_KINESISVIDEO_TAGNAME_PREFIX)) {
+                        mkvTagProcessor.get().process(new MkvTag(tagName, tagValue), currentFragmentMetadata);
+                    }
+
+                    // Empty the values for new tag
+                    tagName = null;
+                    tagValue = null;
+                }
+            }
         }
     }
 
@@ -203,7 +238,6 @@ public class FragmentMetadataVisitor extends CompositeMkvElementVisitor {
         }
     }
 
-
     private void collectPreClusterInfo() {
         final Map<String, String> tagNameToTagValueMap = getTagNameToValueMap();
 
@@ -232,7 +266,6 @@ public class FragmentMetadataVisitor extends CompositeMkvElementVisitor {
                 });
         return trackEntryElementNumberToMkvElement;
     }
-
 
     private void createTrackMetadata(List<MkvElement> trackEntryPropertyLists) {
         Map<EBMLTypeInfo, MkvElement> metaDataProperties = trackEntryPropertyLists.stream()
@@ -266,7 +299,6 @@ public class FragmentMetadataVisitor extends CompositeMkvElementVisitor {
         return ((MkvValue<String>)dataElement.getValueCopy()).getVal();
     }
 
-
     private static Optional<BigInteger> getUnsignedLongValOptional(Map<EBMLTypeInfo, MkvElement> metaDataProperties,
             EBMLTypeInfo key) {
         return Optional.ofNullable(getUnsignedLongVal(metaDataProperties, key));
@@ -293,7 +325,6 @@ public class FragmentMetadataVisitor extends CompositeMkvElementVisitor {
         Validate.isTrue(EBMLTypeInfo.TYPE.BINARY.equals(dataElement.getElementMetaData().getTypeInfo().getType()));
         return ((MkvValue<ByteBuffer>)dataElement.getValueCopy()).getVal();
     }
-
 
     private Map<String, String> getTagNameToValueMap() {
         List<MkvElement> tagElements = tagCollector.copyOfCollection();
@@ -326,14 +357,29 @@ public class FragmentMetadataVisitor extends CompositeMkvElementVisitor {
         return e.getElementPath().get(e.getElementPath().size()-1);
     }
 
-
     private void resetCollectedData() {
         previousFragmentMetadata = currentFragmentMetadata;
         currentFragmentMetadata = Optional.empty();
         trackMetadataMap.clear();
+        tagName = tagValue = null;
 
         tagCollector.clearCollection();
         trackCollector.clearCollection();
     }
 
+
+    public static final class BasicMkvTagProcessor implements FragmentMetadataVisitor.MkvTagProcessor {
+        @Getter
+        private List<MkvTag> tags = new ArrayList<>();
+
+        @Override
+        public void process(MkvTag mkvTag, Optional<FragmentMetadata> currentFragmentMetadata) {
+            tags.add(mkvTag);
+        }
+
+        @Override
+        public void clear() {
+            tags.clear();
+        }
+    }
 }

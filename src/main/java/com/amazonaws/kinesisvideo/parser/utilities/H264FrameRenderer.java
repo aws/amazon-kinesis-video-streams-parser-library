@@ -14,26 +14,20 @@ See the License for the specific language governing permissions and limitations 
 package com.amazonaws.kinesisvideo.parser.utilities;
 
 import java.awt.image.BufferedImage;
-import java.nio.ByteBuffer;
-import java.util.List;
 import java.util.Optional;
 
 import com.amazonaws.kinesisvideo.parser.examples.KinesisVideoFrameViewer;
 import com.amazonaws.kinesisvideo.parser.mkv.Frame;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.jcodec.codecs.h264.H264Decoder;
-import org.jcodec.codecs.h264.mp4.AvcCBox;
-import org.jcodec.common.model.ColorSpace;
-import org.jcodec.common.model.Picture;
-import org.jcodec.scale.AWTUtil;
-import org.jcodec.scale.Transform;
-import org.jcodec.scale.Yuv420jToRgb;
 
-import static org.jcodec.codecs.h264.H264Utils.splitMOVPacket;
+import static com.amazonaws.kinesisvideo.parser.utilities.BufferedImageUtil.addTextToImage;
+
 
 @Slf4j
 public class H264FrameRenderer extends H264FrameDecoder {
+    private static final int PIXEL_TO_LEFT = 10;
+    private static final int PIXEL_TO_TOP_LINE_1 = 20;
+    private static final int PIXEL_TO_TOP_LINE_2 = 40;
 
     private final KinesisVideoFrameViewer kinesisVideoFrameViewer;
 
@@ -48,8 +42,29 @@ public class H264FrameRenderer extends H264FrameDecoder {
     }
 
     @Override
-    public void process(Frame frame, MkvTrackMetadata trackMetadata, Optional<FragmentMetadata> fragmentMetadata) {
+    public void process(Frame frame, MkvTrackMetadata trackMetadata, Optional<FragmentMetadata> fragmentMetadata,
+                        Optional<FragmentMetadataVisitor.MkvTagProcessor> tagProcessor) {
         final BufferedImage bufferedImage = decodeH264Frame(frame, trackMetadata);
+        if (tagProcessor.isPresent()) {
+            final FragmentMetadataVisitor.BasicMkvTagProcessor processor =
+                    (FragmentMetadataVisitor.BasicMkvTagProcessor) tagProcessor.get();
+
+            if (fragmentMetadata.isPresent()) {
+                addTextToImage(bufferedImage,
+                        String.format("Fragment Number: %s", fragmentMetadata.get().getFragmentNumberString()),
+                        PIXEL_TO_LEFT, PIXEL_TO_TOP_LINE_1);
+            }
+
+            if (processor.getTags().size() > 0) {
+                addTextToImage(bufferedImage, "Fragment Metadata: " + processor.getTags().toString(),
+                        PIXEL_TO_LEFT, PIXEL_TO_TOP_LINE_2);
+            } else {
+                addTextToImage(bufferedImage, "Fragment Metadata: No Metadata Available",
+                        PIXEL_TO_LEFT, PIXEL_TO_TOP_LINE_2);
+            }
+        }
         kinesisVideoFrameViewer.update(bufferedImage);
     }
+
+
 }

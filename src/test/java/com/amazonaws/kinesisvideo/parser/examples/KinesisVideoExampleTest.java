@@ -44,4 +44,17 @@ public class KinesisVideoExampleTest {
         Assert.assertEquals(8, example.getFragmentsRead());
     }
 
+    @Ignore
+    @Test
+    public void testConsumerExample() throws InterruptedException, IOException {
+        KinesisVideoExample example = KinesisVideoExample.builder().region(Regions.US_WEST_2)
+                .streamName("myTestStream")
+                .credentialsProvider(new ProfileCredentialsProvider())
+                // Use existing stream in KVS (with Producer sending)
+                .noSampleInputRequired(true)
+                .build();
+
+        example.execute();
+    }
+
 }

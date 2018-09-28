@@ -16,11 +16,13 @@ package com.amazonaws.kinesisvideo.parser.examples;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.kinesisvideo.parser.utilities.FragmentMetadataVisitor;
 import com.amazonaws.kinesisvideo.parser.utilities.FrameVisitor;
 import com.amazonaws.kinesisvideo.parser.utilities.H264FrameRenderer;
 import com.amazonaws.regions.Regions;
@@ -57,15 +59,22 @@ public class KinesisVideoRendererExample extends KinesisVideoCommon {
     private final StreamOps streamOps;
     private final ExecutorService executorService;
     private KinesisVideoRendererExample.GetMediaProcessingArguments getMediaProcessingArguments;
+    private boolean renderFragmentMetadata = true;
+    private boolean noSampleInputRequired = false;
 
     @Builder
     private KinesisVideoRendererExample(Regions region,
-                                           String streamName,
-                                           AWSCredentialsProvider credentialsProvider, InputStream inputVideoStream) {
+                                        String streamName,
+                                        AWSCredentialsProvider credentialsProvider,
+                                        InputStream inputVideoStream,
+                                        boolean renderFragmentMetadata,
+                                        boolean noSampleInputRequired) {
         super(region, credentialsProvider, streamName);
         this.inputStream = inputVideoStream;
         this.streamOps = new StreamOps(region,  streamName, credentialsProvider);
         this.executorService = Executors.newFixedThreadPool(2);
+        this.renderFragmentMetadata = renderFragmentMetadata;
+        this.noSampleInputRequired = noSampleInputRequired;
     }
 
     /**
@@ -76,23 +85,29 @@ public class KinesisVideoRendererExample extends KinesisVideoCommon {
      */
     public void execute() throws InterruptedException, IOException {
 
-        streamOps.recreateStreamIfNecessary();
-        getMediaProcessingArguments = KinesisVideoRendererExample.GetMediaProcessingArguments.create();
+        streamOps.createStreamIfNotExist();
+
+        getMediaProcessingArguments = KinesisVideoRendererExample.GetMediaProcessingArguments.create(
+                renderFragmentMetadata ?
+                        Optional.of(new FragmentMetadataVisitor.BasicMkvTagProcessor()) : Optional.empty());
+
         try (KinesisVideoRendererExample.GetMediaProcessingArguments getMediaProcessingArgumentsLocal = getMediaProcessingArguments) {
 
-            //Start a PutMedia worker to write data to a Kinesis Video Stream.
-          PutMediaWorker putMediaWorker = PutMediaWorker.create(getRegion(),
-                    getCredentialsProvider(),
-                    getStreamName(),
-                    inputStream,
-                  streamOps.amazonKinesisVideo);
-            executorService.submit(putMediaWorker);
+            if (!noSampleInputRequired) {
+                //Start a PutMedia worker to write data to a Kinesis Video Stream.
+                PutMediaWorker putMediaWorker = PutMediaWorker.create(getRegion(),
+                        getCredentialsProvider(),
+                        getStreamName(),
+                        inputStream,
+                        streamOps.amazonKinesisVideo);
+                executorService.submit(putMediaWorker);
+            }
 
             //Start a GetMedia worker to read and process data from the Kinesis Video Stream.
             GetMediaWorker getMediaWorker = GetMediaWorker.create(getRegion(),
                     getCredentialsProvider(),
                     getStreamName(),
-                    new StartSelector().withStartSelectorType(StartSelectorType.EARLIEST),
+                    new StartSelector().withStartSelectorType(StartSelectorType.NOW),
                     streamOps.amazonKinesisVideo,
                     getMediaProcessingArgumentsLocal.getFrameVisitor());
             executorService.submit(getMediaWorker);
@@ -116,10 +131,12 @@ public class KinesisVideoRendererExample extends KinesisVideoCommon {
             this.frameVisitor = frameVisitor;
         }
 
-        private static GetMediaProcessingArguments create() throws IOException {
+        private static GetMediaProcessingArguments create(
+                Optional<FragmentMetadataVisitor.MkvTagProcessor> tagProcessor) throws IOException {
 
             KinesisVideoFrameViewer kinesisVideoFrameViewer = new KinesisVideoFrameViewer(FRAME_WIDTH, FRAME_HEIGHT);
-            return new GetMediaProcessingArguments(FrameVisitor.create(H264FrameRenderer.create(kinesisVideoFrameViewer)));
+            return new GetMediaProcessingArguments(
+                        FrameVisitor.create(H264FrameRenderer.create(kinesisVideoFrameViewer), tagProcessor));
         }
 
         @Override

@@ -24,6 +24,8 @@ import java.io.InputStream;
 import java.util.Arrays;
 import java.util.OptionalLong;
 
+import static com.amazonaws.kinesisvideo.parser.ebml.EBMLUtils.UNKNOWN_LENGTH_VALUE;
+
 /**
  * Tests for the {@link EBMLParser}.
  */
@@ -236,14 +238,14 @@ public class EBMLParserTest {
                         .callbackType(TestEBMLParserCallback.CallbackDescription.CallbackType.START)
                         .typeInfo(TestEBMLTypeInfoProvider.SEGMENT)
                         .elementCount(3)
-                        .numBytes(OptionalLong.of(EBMLParserInternalElement.UNKNOWN_LENGTH_VALUE))
+                        .numBytes(OptionalLong.of(UNKNOWN_LENGTH_VALUE))
                         .bytes(SEGMENT_element_rawbytes)
                         .build())
                 .expectCallback(TestEBMLParserCallback.CallbackDescription.builder()
                         .callbackType(TestEBMLParserCallback.CallbackDescription.CallbackType.START)
                         .typeInfo(TestEBMLTypeInfoProvider.SEEKHEAD)
                         .elementCount(4)
-                        .numBytes(OptionalLong.of(EBMLParserInternalElement.UNKNOWN_LENGTH_VALUE))
+                        .numBytes(OptionalLong.of(UNKNOWN_LENGTH_VALUE))
                         .bytes(SEEKHEAD_element_rawbytes)
                         .build());
         addExpectedCallbacksForBaseElement(TestEBMLTypeInfoProvider.CRC,
@@ -279,7 +281,6 @@ public class EBMLParserTest {
 
         callParser(outputStream, 1);
     }
-
 
     @Test
     public void unknownElementsTest() throws IOException {
@@ -319,7 +320,6 @@ public class EBMLParserTest {
         testRawBytesMatch = false;
         callParser(outputStream, 1);
     }
-
 
     private ByteArrayOutputStream setupTestForMasterElementWithOneChildAndUnknownlength() throws IOException {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -404,7 +404,7 @@ public class EBMLParserTest {
                 .callbackType(TestEBMLParserCallback.CallbackDescription.CallbackType.START)
                 .typeInfo(TestEBMLTypeInfoProvider.EBML)
                 .elementCount(0)
-                .numBytes(OptionalLong.of(EBMLParserInternalElement.UNKNOWN_LENGTH_VALUE))
+                .numBytes(OptionalLong.of(UNKNOWN_LENGTH_VALUE))
                 .bytes(EBML_element_rawbytes)
                 .build();
     }
