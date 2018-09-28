@@ -13,7 +13,6 @@ See the License for the specific language governing permissions and limitations 
 */
 package com.amazonaws.kinesisvideo.parser.utilities;
 
-import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -54,8 +53,8 @@ public class FragmentMetadata {
     private Optional<String> continuationToken = Optional.empty();
 
     private FragmentMetadata(String fragmentNumberString,
-            double serverSideTimestampSeconds,
-            double producerSideTimestampSeconds) {
+                             double serverSideTimestampSeconds,
+                             double producerSideTimestampSeconds) {
         this(fragmentNumberString,
                 convertToMillis(serverSideTimestampSeconds),
                 convertToMillis(producerSideTimestampSeconds),
@@ -69,11 +68,11 @@ public class FragmentMetadata {
     }
 
     private FragmentMetadata(String fragmentNumberString,
-            long serverSideTimestampMillis,
-            long producerSideTimestampMillis,
-            boolean success,
-            long errorId,
-            String errorCode) {
+                             long serverSideTimestampMillis,
+                             long producerSideTimestampMillis,
+                             boolean success,
+                             long errorId,
+                             String errorCode) {
         this.fragmentNumberString = fragmentNumberString;
         this.fragmentNumber = new BigInteger(fragmentNumberString);
         this.serverSideTimestampMillis = serverSideTimestampMillis;

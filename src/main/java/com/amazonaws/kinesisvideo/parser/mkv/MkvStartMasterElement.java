@@ -22,6 +22,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 import java.util.List;
 
+import static com.amazonaws.kinesisvideo.parser.ebml.EBMLUtils.UNKNOWN_LENGTH_VALUE;
+
 /**
  * Class representing the start of a mkv master element.
  * It includes the bytes containing the id and size of the element along with its {@link EBMLElementMetaData}
@@ -62,7 +64,7 @@ public class MkvStartMasterElement extends MkvElement {
     }
 
     public boolean isUnknownLength() {
-        return dataSize == 0xFFFFFFFFFFFFFFL;
+        return dataSize == UNKNOWN_LENGTH_VALUE;
     }
 
     @Override

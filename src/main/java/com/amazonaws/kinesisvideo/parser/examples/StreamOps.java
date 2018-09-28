@@ -68,19 +68,38 @@ public class StreamOps extends KinesisVideoCommon {
         //some basic validations on the response of the create stream
         Validate.isTrue(createdStreamInfo.isPresent());
         Validate.isTrue(createdStreamInfo.get().getDataRetentionInHours() == DATA_RETENTION_IN_HOURS);
-        log.info("StreamOps {} created ARN {}", streamName, createdStreamInfo.get().getStreamARN());
+        log.info("Stream {} created ARN {}", streamName, createdStreamInfo.get().getStreamARN());
+    }
+
+    public void createStreamIfNotExist() throws InterruptedException {
+        final Optional<StreamInfo> streamInfo = getStreamInfo();
+        log.info("Stream {} exists {}", streamName, streamInfo.isPresent());
+        if (!streamInfo.isPresent()) {
+            //create the stream.
+            amazonKinesisVideo.createStream(new CreateStreamRequest().withStreamName(streamName)
+                    .withDataRetentionInHours(DATA_RETENTION_IN_HOURS)
+                    .withMediaType("video/h264"));
+            log.info("CreateStream called for stream {}", streamName);
+            //wait for stream to become active.
+            final Optional<StreamInfo> createdStreamInfo =
+                    waitForStateToMatch((s) -> s.isPresent() && "ACTIVE".equals(s.get().getStatus()));
+            //some basic validations on the response of the create stream
+            Validate.isTrue(createdStreamInfo.isPresent());
+            Validate.isTrue(createdStreamInfo.get().getDataRetentionInHours() == DATA_RETENTION_IN_HOURS);
+            log.info("Stream {} created ARN {}", streamName, createdStreamInfo.get().getStreamARN());
+        }
     }
 
     private void deleteStreamIfPresent() throws InterruptedException {
         final Optional<StreamInfo> streamInfo = getStreamInfo();
-        log.info("StreamOps {} exists {}", streamName, streamInfo.isPresent());
+        log.info("Stream {} exists {}", streamName, streamInfo.isPresent());
         if (streamInfo.isPresent()) {
             //Delete the stream
             amazonKinesisVideo.deleteStream(new DeleteStreamRequest().withStreamARN(streamInfo.get().getStreamARN()));
             log.info("DeleteStream called for stream {} ARN {} ", streamName, streamInfo.get().getStreamARN());
             //Wait for stream to be deleted
             waitForStateToMatch((s) -> !s.isPresent());
-            log.info("StreamOps {} deleted", streamName);
+            log.info("Stream {} deleted", streamName);
         }
     }
 

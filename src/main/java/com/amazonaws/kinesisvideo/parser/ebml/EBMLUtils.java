@@ -23,6 +23,8 @@ import java.nio.ByteBuffer;
  */
 public class EBMLUtils {
 
+    public static final long UNKNOWN_LENGTH_VALUE = -1;
+
     /**
      * Max length for a EBML ID
      */
@@ -35,7 +37,6 @@ public class EBMLUtils {
     private EBMLUtils() {
 
     }
-
 
     /**
      * constant for byte with first bit set.
@@ -125,9 +126,19 @@ public class EBMLUtils {
         // Read the rest of the bytes
         final long rest = readEbmlValueNumber(source, size);
 
+        long value = (firstByte & ~((byte) BYTE_WITH_FIRST_BIT_SET >> size)) << (size * Byte.SIZE) | rest;
+
+        long unknownValue = (0xff >> (size + 1));
+        unknownValue <<= size * 8;
+        unknownValue |= (1L << (size * 8)) - 1;
+
+        // Special handing for unknown length
+        if (value == unknownValue) {
+            value = -1;
+        }
+
         // Slap the first byte's value onto the front (with the first one-bit unset)
-        resultAcceptor.accept((firstByte & ~((byte) BYTE_WITH_FIRST_BIT_SET >> size)) << (size * Byte.SIZE) | rest,
-                size + 1);
+        resultAcceptor.accept(value, size + 1);
     }
 
     /**
@@ -148,7 +159,6 @@ public class EBMLUtils {
         return ((firstByte & ~((byte) BYTE_WITH_FIRST_BIT_SET >> size)) << (size * Byte.SIZE) | rest);
     }
 
-
     /**
      * An alias for readEbmlInt that makes it clear we're reading a data size value.
      *
@@ -157,7 +167,6 @@ public class EBMLUtils {
     static void readSize(final TrackingReplayableIdAndSizeByteSource source, SizeConsumer resultAcceptor) {
         readEbmlInt(source, resultAcceptor);
     }
-
 
     private static int readByte(final TrackingReplayableIdAndSizeByteSource source) {
         return source.readByte() & BYTE_MASK;
@@ -268,8 +277,6 @@ public class EBMLUtils {
 
         return value;
     }
-
-
 
     public static BigInteger readDataUnsignedInteger(final ByteBuffer byteBuffer, long size) {
         Validate.inclusiveBetween(0L,

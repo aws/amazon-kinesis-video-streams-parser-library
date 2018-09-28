@@ -72,12 +72,14 @@ public class KinesisVideoExample extends KinesisVideoCommon {
     private PutMediaWorker putMediaWorker;
     private final StreamOps streamOps;
     private GetMediaProcessingArguments getMediaProcessingArguments;
+    private boolean noSampleInputRequired = false;
 
     @Builder
     private KinesisVideoExample(Regions region,
-            String streamName,
-            AWSCredentialsProvider credentialsProvider,
-            InputStream inputVideoStream) {
+                                String streamName,
+                                AWSCredentialsProvider credentialsProvider,
+                                InputStream inputVideoStream,
+                                boolean noSampleInputRequired) {
         super(region, credentialsProvider, streamName);
         final AmazonKinesisVideoClientBuilder builder = AmazonKinesisVideoClientBuilder.standard();
         configureClient(builder);
@@ -85,6 +87,7 @@ public class KinesisVideoExample extends KinesisVideoCommon {
         this.inputStream = inputVideoStream;
         this.streamOps = new StreamOps(region,  streamName, credentialsProvider);
         this.executorService = Executors.newFixedThreadPool(2);
+        this.noSampleInputRequired = noSampleInputRequired;
     }
 
     /**
@@ -94,8 +97,8 @@ public class KinesisVideoExample extends KinesisVideoCommon {
      * @throws IOException fails to read video from the input stream or write to the output stream.
      */
     public void execute () throws InterruptedException, IOException {
-        //Create the Kinesis Video stream, deleting and recreating if necessary.
-        streamOps.recreateStreamIfNecessary();
+        //Create the Kinesis Video stream if it doesn't exist.
+        streamOps.createStreamIfNotExist();
 
         getMediaProcessingArguments = GetMediaProcessingArguments.create();
 
@@ -104,18 +107,20 @@ public class KinesisVideoExample extends KinesisVideoCommon {
             GetMediaWorker getMediaWorker = GetMediaWorker.create(getRegion(),
                     getCredentialsProvider(),
                     getStreamName(),
-                    new StartSelector().withStartSelectorType(StartSelectorType.EARLIEST),
+                    new StartSelector().withStartSelectorType(StartSelectorType.NOW),
                     amazonKinesisVideo,
                     getMediaProcessingArgumentsLocal.getMkvElementVisitor());
             executorService.submit(getMediaWorker);
 
-            //Start a PutMedia worker to write data to a Kinesis Video Stream.
-            putMediaWorker = PutMediaWorker.create(getRegion(),
-                    getCredentialsProvider(),
-                    getStreamName(),
-                    inputStream,
-                    amazonKinesisVideo);
-            executorService.submit(putMediaWorker);
+            if (!noSampleInputRequired) {
+                //Start a PutMedia worker to write data to a Kinesis Video Stream.
+                putMediaWorker = PutMediaWorker.create(getRegion(),
+                        getCredentialsProvider(),
+                        getStreamName(),
+                        inputStream,
+                        amazonKinesisVideo);
+                executorService.submit(putMediaWorker);
+            }
 
             //Wait for the workers to finish.
             executorService.shutdown();
