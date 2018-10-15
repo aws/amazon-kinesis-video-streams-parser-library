@@ -17,6 +17,7 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.kinesisvideo.parser.mkv.MkvElementVisitException;
 import com.amazonaws.kinesisvideo.parser.utilities.FragmentMetadata;
+import com.amazonaws.kinesisvideo.parser.mkv.FrameProcessException;
 import com.amazonaws.kinesisvideo.parser.utilities.consumer.GetMediaResponseStreamConsumer;
 import com.amazonaws.kinesisvideo.parser.utilities.consumer.GetMediaResponseStreamConsumerFactory;
 import com.amazonaws.regions.Regions;
@@ -34,6 +35,7 @@ import org.apache.commons.lang.Validate;
 
 import java.io.IOException;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Worker used to make a GetMedia call to Kinesis Video and stream in data and parse it and apply a visitor.
@@ -45,7 +47,7 @@ public class ContinuousGetMediaWorker extends KinesisVideoCommon implements Runn
     private final GetMediaResponseStreamConsumerFactory consumerFactory;
     private final StartSelector startSelector;
     private Optional<String> fragmentNumberToStartAfter = Optional.empty();
-    private boolean shouldStop = false;
+    private volatile AtomicBoolean shouldStop = new AtomicBoolean(false);
 
     private ContinuousGetMediaWorker(Regions region,
             AWSCredentialsProvider credentialsProvider,
@@ -77,13 +79,14 @@ public class ContinuousGetMediaWorker extends KinesisVideoCommon implements Runn
     }
 
     public void stop() {
-        shouldStop  = true;
+        log.info("Stop ContinuousGetMediaWorker");
+        shouldStop.set(true);
     }
 
     @Override
     public void run() {
         log.info("Start ContinuousGetMedia worker for stream {}", streamName);
-        while (!shouldStop) {
+        while (!shouldStop.get()) {
             try {
 
                 StartSelector selectorToUse = fragmentNumberToStartAfter.map(fn -> new StartSelector().withStartSelectorType(StartSelectorType.FRAGMENT_NUMBER)
@@ -96,19 +99,22 @@ public class ContinuousGetMediaWorker extends KinesisVideoCommon implements Runn
                         result.getSdkResponseMetadata().getRequestId());
 
                 if (result.getSdkHttpMetadata().getHttpStatusCode() == HTTP_STATUS_OK) {
-                    GetMediaResponseStreamConsumer consumer = consumerFactory.createConsumer();
-                            consumer.process(
-                                    result.getPayload(), this::updateFragmentNumberToStartAfter);
+                    try (GetMediaResponseStreamConsumer consumer = consumerFactory.createConsumer()) {
+                        consumer.process(result.getPayload(), this::updateFragmentNumberToStartAfter);
+                    }
                 } else {
                     Thread.sleep(200);
                 }
+            } catch (FrameProcessException e) {
+                log.error("FrameProcessException in ContinuousGetMedia worker for stream {} {}", streamName, e);
+                break;
             } catch (IOException | MkvElementVisitException e) {
                 log.error("Failure in ContinuousGetMedia worker for stream {} {}", streamName, e);
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
                 throw new RuntimeException(ie);
             } catch (Throwable t) {
-                log.error("WHAT",t);
+                log.error("Throwable",t);
             } finally {
                 log.info("Exit processing GetMedia called for stream {}", streamName);
             }
