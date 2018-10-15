@@ -30,7 +30,7 @@ import java.io.InputStream;
  * processed or the process method decides to stop for some other reason. The FragmentMetadataCallback is invoked at
  * the end of every processed fragment.
  */
-public abstract class GetMediaResponseStreamConsumer {
+public abstract class GetMediaResponseStreamConsumer implements AutoCloseable {
 
     public abstract void process(InputStream inputStream, FragmentMetadataCallback callback)
             throws MkvElementVisitException, IOException;
@@ -40,5 +40,10 @@ public abstract class GetMediaResponseStreamConsumer {
             MkvElementVisitor mkvElementVisitor) throws MkvElementVisitException {
         StreamingMkvReader.createDefault(new InputStreamParserByteSource(inputStream))
                 .apply(FragmentProgressTracker.create(mkvElementVisitor, endOfFragmentCallback));
+    }
+
+    @Override
+    public void close() {
+        //No op close. Derived classes should implement this method to meaningfully handle cleanup of the resources.
     }
 }
