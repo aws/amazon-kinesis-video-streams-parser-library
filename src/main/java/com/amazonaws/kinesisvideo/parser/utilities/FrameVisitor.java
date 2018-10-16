@@ -52,11 +52,16 @@ public class FrameVisitor extends CompositeMkvElementVisitor {
                 tagProcessor, frameProcessor);
     }
 
-    public interface FrameProcessor {
+    public void close() {
+        frameProcessor.close();
+    }
+
+    public interface FrameProcessor extends AutoCloseable {
         default void process(Frame frame, MkvTrackMetadata trackMetadata,
                              Optional<FragmentMetadata> fragmentMetadata) {
             throw new NotImplementedException("Default FrameVisitor.FrameProcessor");
         }
+
         default void process(Frame frame, MkvTrackMetadata trackMetadata,
                              Optional<FragmentMetadata> fragmentMetadata,
                              Optional<FragmentMetadataVisitor.MkvTagProcessor> tagProcessor) {
@@ -65,6 +70,12 @@ public class FrameVisitor extends CompositeMkvElementVisitor {
             } else {
                 process(frame, trackMetadata, fragmentMetadata);
             }
+        }
+
+        @Override
+        default void close() {
+            //No op close. Derived classes should implement this method to meaningfully handle cleanup of the
+            // resources.
         }
     }
 

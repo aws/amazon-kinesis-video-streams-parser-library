@@ -69,5 +69,8 @@ public class MergedOutputPiper extends GetMediaResponseStreamConsumer {
         }
     }
 
-
+    @Override
+    public void close() {
+        targetProcess.destroyForcibly();
+    }
 }
