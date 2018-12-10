@@ -17,6 +17,7 @@ import java.util.Optional;
 
 import com.amazonaws.kinesisvideo.parser.ebml.MkvTypeInfos;
 import com.amazonaws.kinesisvideo.parser.mkv.Frame;
+import com.amazonaws.kinesisvideo.parser.mkv.FrameProcessException;
 import com.amazonaws.kinesisvideo.parser.mkv.MkvElementVisitor;
 import com.amazonaws.kinesisvideo.parser.mkv.MkvValue;
 import com.amazonaws.kinesisvideo.parser.mkv.visitors.CompositeMkvElementVisitor;
@@ -58,13 +59,13 @@ public class FrameVisitor extends CompositeMkvElementVisitor {
 
     public interface FrameProcessor extends AutoCloseable {
         default void process(Frame frame, MkvTrackMetadata trackMetadata,
-                             Optional<FragmentMetadata> fragmentMetadata) {
+                             Optional<FragmentMetadata> fragmentMetadata) throws FrameProcessException {
             throw new NotImplementedException("Default FrameVisitor.FrameProcessor");
         }
 
         default void process(Frame frame, MkvTrackMetadata trackMetadata,
                              Optional<FragmentMetadata> fragmentMetadata,
-                             Optional<FragmentMetadataVisitor.MkvTagProcessor> tagProcessor) {
+                             Optional<FragmentMetadataVisitor.MkvTagProcessor> tagProcessor) throws FrameProcessException {
             if (tagProcessor.isPresent()) {
                 throw new NotImplementedException("Default FrameVisitor.FrameProcessor");
             } else {
