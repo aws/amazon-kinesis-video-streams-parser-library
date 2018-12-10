@@ -106,10 +106,10 @@ public class ContinuousGetMediaWorker extends KinesisVideoCommon implements Runn
                     Thread.sleep(200);
                 }
             } catch (FrameProcessException e) {
-                log.error("FrameProcessException in ContinuousGetMedia worker for stream {} {}", streamName, e);
+                log.error("FrameProcessException in ContinuousGetMedia worker for stream: " + streamName, e);
                 break;
             } catch (IOException | MkvElementVisitException e) {
-                log.error("Failure in ContinuousGetMedia worker for stream {} {}", streamName, e);
+                log.error("Failure in ContinuousGetMedia worker for stream: " + streamName, e);
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
                 throw new RuntimeException(ie);

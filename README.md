@@ -104,6 +104,14 @@ with the AWS SDK for the Kinesis Video. This example provides examples for
  The Gstreamer pipeline is a toy example that demonstrates that Gstreamer can parse the mkv passed into it. 
 
 ## Release Notes
+### Release 1.0.8 (Dec 2018)
+* Add close method for derived classes to cleanup resources.
+* Add exception type which could be used in downstream frame processing logic.
+* Make boolean value thread-safe in ContinuousGetMediaWorker.
+* Remove extra exception wrapping in CompositeMkvElementVisitor.
+* Declare exception throwing for some methods.
+* Enabled stack trace in ContinuousGetMediaWorker when there is an exception.
+
 ### Release 1.0.7 (Sep 2018)
 * Add flag in KinesisVideoRendererExample and KinesisVideoExample to use the existing stream (and not doing PutMedia again if it exists already).
 * Added support to retrieve the information from FragmentMetadata and display in the image panel during rendering.
