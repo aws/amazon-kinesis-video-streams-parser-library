@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and limitations 
 package com.amazonaws.kinesisvideo.parser.utilities;
 
 import com.amazonaws.kinesisvideo.parser.mkv.Frame;
+import com.amazonaws.kinesisvideo.parser.mkv.FrameProcessException;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.jcodec.codecs.h264.H264Decoder;
@@ -43,7 +44,7 @@ public class H264FrameDecoder implements FrameVisitor.FrameProcessor  {
     private byte[] codecPrivateData;
 
     @Override
-    public void process(Frame frame, MkvTrackMetadata trackMetadata, Optional<FragmentMetadata> fragmentMetadata) {
+    public void process(Frame frame, MkvTrackMetadata trackMetadata, Optional<FragmentMetadata> fragmentMetadata) throws FrameProcessException {
         decodeH264Frame(frame, trackMetadata);
     }
 

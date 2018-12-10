@@ -63,17 +63,13 @@ public class CompositeMkvElementVisitor extends MkvElementVisitor {
     }
 
     private void visitAll(MkvElement element) throws MkvElementVisitException {
-        try {
-            for (MkvElementVisitor childVisitor : childVisitors) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Composite visitor calling {} on element {}",
-                            childVisitor.getClass().toString(),
-                            element.toString());
-                }
-                element.accept(childVisitor);
+        for (MkvElementVisitor childVisitor : childVisitors) {
+            if (log.isDebugEnabled()) {
+                log.debug("Composite visitor calling {} on element {}",
+                        childVisitor.getClass().toString(),
+                        element.toString());
             }
-        } catch (MkvElementVisitException e) {
-            throw new MkvElementVisitException("Composite Visitor caught exception ", e);
+            element.accept(childVisitor);
         }
     }
 }
