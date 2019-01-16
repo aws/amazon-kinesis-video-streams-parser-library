@@ -100,7 +100,7 @@ public class FrameRendererVisitor extends CompositeMkvElementVisitor {
 
                 // Width and heights must be multiples of 16, otherwise jcodec throws an array out of bounds exception
                 // https://github.com/jcodec/jcodec/issues/154
-                Picture buf = Picture.create(pixelWidth + (pixelWidth % 16), pixelHeight + (pixelHeight % 16), ColorSpace.YUV420J);
+                Picture buf = Picture.create(pixelWidth + ((16 - (pixelWidth % 16)) % 16), pixelHeight + ((16 - (pixelHeight % 16)) % 16), ColorSpace.YUV420J);
 
                 List<ByteBuffer> byteBuffers = splitMOVPacket(frameBuffer, avcC);
                 Picture pic = decoder.decodeFrameFromNals(byteBuffers, buf.getData());
