@@ -64,7 +64,10 @@ public class H264FrameDecoder implements FrameVisitor.FrameProcessor  {
         decoder.addSps(avcC.getSpsList());
         decoder.addPps(avcC.getPpsList());
 
-        Picture buf = Picture.create(pixelWidth, pixelHeight, ColorSpace.YUV420J);
+        // Width and heights must be multiples of 16, otherwise jcodec throws an array out of bounds exception
+        // https://github.com/jcodec/jcodec/issues/154
+        Picture buf = Picture.create(pixelWidth + (pixelWidth % 16), pixelHeight + (pixelHeight % 16), ColorSpace.YUV420J);
+
         List<ByteBuffer> byteBuffers = splitMOVPacket(frameBuffer, avcC);
         Picture pic = decoder.decodeFrameFromNals(byteBuffers, buf.getData());
 
