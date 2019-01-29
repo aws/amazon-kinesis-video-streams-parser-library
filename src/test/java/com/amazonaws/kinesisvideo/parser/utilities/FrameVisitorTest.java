@@ -19,6 +19,8 @@ import com.amazonaws.kinesisvideo.parser.ebml.InputStreamParserByteSource;
 import com.amazonaws.kinesisvideo.parser.mkv.Frame;
 import com.amazonaws.kinesisvideo.parser.mkv.StreamingMkvReader;
 
+import lombok.Getter;
+import lombok.NonNull;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,35 +30,54 @@ import java.io.InputStream;
 import java.util.Optional;
 
 public class FrameVisitorTest {
-    private int frameProcessCount;
-    private int nullFrameCount;
-    private static int SIMPLE_BLOCKS_COUNT_MKV = 444;
+    private static final int VIDEO_FRAMES_COUNT = 909;
+    private static final int AUDIO_FRAMES_COUNT = 1425;
+    private static final int SIMPLE_BLOCKS_COUNT_MKV = VIDEO_FRAMES_COUNT + AUDIO_FRAMES_COUNT;
 
-    private final class TestFrameProcessor implements FrameVisitor.FrameProcessor {
+    @Getter
+    public static final class TestFrameProcessor implements FrameVisitor.FrameProcessor {
+
+        private long framesCount = 0L;
+
         @Override
-        public void process(final Frame frame, final MkvTrackMetadata trackMetadata,
+        public void process(@NonNull final Frame frame, final MkvTrackMetadata trackMetadata,
                             final Optional<FragmentMetadata> fragmentMetadata) {
-            frameProcessCount++;
-            if(frame == null) {
-                nullFrameCount++;
-            }
+            framesCount++;
         }
 
     }
     private FrameVisitor frameVisitor;
+    private TestFrameProcessor frameProcessor;
     private StreamingMkvReader streamingMkvReader;
 
     @Before
     public void setUp() throws Exception {
-        frameVisitor = FrameVisitor.create(new TestFrameProcessor());
+        frameProcessor = new TestFrameProcessor();
+        frameVisitor = FrameVisitor.create(frameProcessor);
     }
 
     @Test
     public void testWithMkvVideo() throws Exception {
-        streamingMkvReader = StreamingMkvReader.createDefault(getClustersByteSource("clusters.mkv"));
+        streamingMkvReader = StreamingMkvReader.createDefault(getClustersByteSource("vogels_480.mkv"));
         streamingMkvReader.apply(frameVisitor);
-        Assert.assertEquals(SIMPLE_BLOCKS_COUNT_MKV, frameProcessCount);
-        Assert.assertEquals(0, nullFrameCount);
+        Assert.assertEquals(SIMPLE_BLOCKS_COUNT_MKV, frameProcessor.getFramesCount());
+
+    }
+
+    @Test
+    public void testForVideoFrames() throws Exception {
+        frameVisitor = FrameVisitor.create(frameProcessor, Optional.empty(), Optional.of(1L));
+        streamingMkvReader = StreamingMkvReader.createDefault(getClustersByteSource("vogels_480.mkv"));
+        streamingMkvReader.apply(frameVisitor);
+        Assert.assertEquals(VIDEO_FRAMES_COUNT, frameProcessor.getFramesCount());
+    }
+
+    @Test
+    public void testForAudioFrames() throws Exception {
+        frameVisitor = FrameVisitor.create(frameProcessor, Optional.empty(), Optional.of(2L));
+        streamingMkvReader = StreamingMkvReader.createDefault(getClustersByteSource("vogels_480.mkv"));
+        streamingMkvReader.apply(frameVisitor);
+        Assert.assertEquals(AUDIO_FRAMES_COUNT, frameProcessor.getFramesCount());
     }
 
     private InputStreamParserByteSource getClustersByteSource(String name) throws IOException {

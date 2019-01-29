@@ -26,24 +26,25 @@ import org.junit.Test;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.Optional;
 
 public class H264FrameDecoderTest {
 
     @Test
     public void frameDecodeCountTest() throws IOException, MkvElementVisitException {
         final InputStream in = TestResourceUtil.getTestInputStream("kinesis_video_renderer_example_output.mkv");
-        byte[] codecPrivateData = new byte[]{
+        final byte[] codecPrivateData = new byte[]{
                 0x01, 0x64, 0x00, 0x28, (byte) 0xff, (byte) 0xe1, 0x00,
                 0x0e, 0x27, 0x64, 0x00, 0x28, (byte) 0xac, 0x2b, 0x40,
                 0x50, 0x1e, (byte) 0xd0, 0x0f, 0x12, 0x26, (byte) 0xa0,
                 0x01, 0x00, 0x04, 0x28, (byte) 0xee, 0x1f, 0x2c
         };
 
-        H264FrameDecoder frameDecoder = new H264FrameDecoder();
-        StreamingMkvReader mkvStreamReader =
+        final H264FrameDecoder frameDecoder = new H264FrameDecoder();
+        final StreamingMkvReader mkvStreamReader =
                 StreamingMkvReader.createDefault(new InputStreamParserByteSource(in));
 
-        CountVisitor countVisitor = CountVisitor.create(MkvTypeInfos.CLUSTER, MkvTypeInfos.SEGMENT,
+        final CountVisitor countVisitor = CountVisitor.create(MkvTypeInfos.CLUSTER, MkvTypeInfos.SEGMENT,
                 MkvTypeInfos.SIMPLEBLOCK, MkvTypeInfos.TRACKS);
 
         mkvStreamReader.apply(new CompositeMkvElementVisitor(countVisitor, FrameVisitor.create(frameDecoder)));
@@ -53,40 +54,29 @@ public class H264FrameDecoderTest {
         Assert.assertEquals(444, countVisitor.getCount(MkvTypeInfos.SIMPLEBLOCK));
 
         Assert.assertEquals(444, frameDecoder.getFrameCount());
-        ByteBuffer codecPrivateDataFromFrame = frameDecoder.getCodecPrivateData();
+        final ByteBuffer codecPrivateDataFromFrame = frameDecoder.getCodecPrivateData();
         Assert.assertEquals(ByteBuffer.wrap(codecPrivateData), codecPrivateDataFromFrame);
     }
 
-    /**
-     * Test jcodec decoding a frame from an mkv that has a pixel width/height that isn't a multiple of 16
-     */
-    @Test
-    public void frameDecodeCountTest2() throws IOException, MkvElementVisitException {
-        final InputStream in = TestResourceUtil.getTestInputStream("output_get_media.mkv");
-        byte[] codecPrivateData = new byte[]{
-                0x01, 0x4d, 0x40, 0x1e, 0x03, 0x01, 0x00, 0x27, 0x27, 0x4d, 0x40, 0x1e,
-                (byte) 0xb9, 0x10, 0x14, 0x05, (byte) 0xff, 0x2e, 0x02, (byte) 0xd4, 0x04, 0x04, 0x07, (byte) 0xc0,
-                0x00, 0x00, 0x03, 0x00, 0x40, 0x00, 0x00, 0x0f, 0x38, (byte) 0xa0, 0x00, 0x3d,
-                0x09, 0x00, 0x07, (byte) 0xa1, 0x3b, (byte) 0xde, (byte) 0xe0, 0x3e, 0x11, 0x08, (byte) 0xd4, 0x01,
-                0x00, 0x04, 0x28, (byte) 0xfe, 0x3c, (byte) 0x80
-        };
 
-        H264FrameDecoder frameDecoder = new H264FrameDecoder();
-        StreamingMkvReader mkvStreamReader =
+    @Test
+    public void frameDecodeForDifferentResolution() throws Exception {
+        final InputStream in = TestResourceUtil.getTestInputStream("vogels_330.mkv");
+        final H264FrameDecoder frameDecoder = new H264FrameDecoder();
+        final StreamingMkvReader mkvStreamReader =
                 StreamingMkvReader.createDefault(new InputStreamParserByteSource(in));
 
-        CountVisitor countVisitor = CountVisitor.create(MkvTypeInfos.CLUSTER, MkvTypeInfos.SEGMENT,
+        final CountVisitor countVisitor = CountVisitor.create(MkvTypeInfos.CLUSTER, MkvTypeInfos.SEGMENT,
                 MkvTypeInfos.SIMPLEBLOCK, MkvTypeInfos.TRACKS);
+        final FrameVisitorTest.TestFrameProcessor frameProcessor = new FrameVisitorTest.TestFrameProcessor();
+        mkvStreamReader.apply(new CompositeMkvElementVisitor(countVisitor,
+                FrameVisitor.create(frameDecoder, Optional.empty(), Optional.of(1L)),
+                FrameVisitor.create(frameProcessor, Optional.empty(), Optional.of(2L))));
 
-        mkvStreamReader.apply(new CompositeMkvElementVisitor(countVisitor, FrameVisitor.create(frameDecoder)));
-
-        Assert.assertEquals(5, countVisitor.getCount(MkvTypeInfos.TRACKS));
-        Assert.assertEquals(5, countVisitor.getCount(MkvTypeInfos.CLUSTER));
-        Assert.assertEquals(300, countVisitor.getCount(MkvTypeInfos.SIMPLEBLOCK));
-
-        Assert.assertEquals(300, frameDecoder.getFrameCount());
-        ByteBuffer codecPrivateDataFromFrame = frameDecoder.getCodecPrivateData();
-        Assert.assertEquals(ByteBuffer.wrap(codecPrivateData), codecPrivateDataFromFrame);
+        Assert.assertEquals(1, countVisitor.getCount(MkvTypeInfos.TRACKS));
+        Assert.assertEquals(9, countVisitor.getCount(MkvTypeInfos.CLUSTER));
+        Assert.assertEquals(2334, countVisitor.getCount(MkvTypeInfos.SIMPLEBLOCK)); // Total frames
+        Assert.assertEquals(909, frameDecoder.getFrameCount()); // Video frames
+        Assert.assertEquals(1425, frameProcessor.getFramesCount()); // Audio frames
     }
-
 }
