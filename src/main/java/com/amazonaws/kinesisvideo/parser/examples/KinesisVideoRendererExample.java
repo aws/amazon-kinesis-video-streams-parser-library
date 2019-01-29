@@ -136,7 +136,8 @@ public class KinesisVideoRendererExample extends KinesisVideoCommon {
 
             KinesisVideoFrameViewer kinesisVideoFrameViewer = new KinesisVideoFrameViewer(FRAME_WIDTH, FRAME_HEIGHT);
             return new GetMediaProcessingArguments(
-                        FrameVisitor.create(H264FrameRenderer.create(kinesisVideoFrameViewer), tagProcessor));
+                    FrameVisitor.create(H264FrameRenderer.create(kinesisVideoFrameViewer), tagProcessor,
+                            Optional.of(1L))); // Video track number
         }
 
         @Override

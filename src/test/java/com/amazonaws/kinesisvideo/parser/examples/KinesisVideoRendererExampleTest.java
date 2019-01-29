@@ -29,7 +29,20 @@ public class KinesisVideoRendererExampleTest {
         KinesisVideoRendererExample example = KinesisVideoRendererExample.builder().region(Regions.US_WEST_2)
                 .streamName("render-example-stream")
                 .credentialsProvider(new ProfileCredentialsProvider())
-                .inputVideoStream(TestResourceUtil.getTestInputStream("clusters.mkv"))
+                .inputVideoStream(TestResourceUtil.getTestInputStream("vogels_480.mkv"))
+                .renderFragmentMetadata(false)
+                .build();
+
+        example.execute();
+    }
+
+    @Ignore
+    @Test
+    public void testDifferentResolution() throws InterruptedException, IOException {
+        KinesisVideoRendererExample example = KinesisVideoRendererExample.builder().region(Regions.US_WEST_2)
+                .streamName("render-example-stream")
+                .credentialsProvider(new ProfileCredentialsProvider())
+                .inputVideoStream(TestResourceUtil.getTestInputStream("vogels_330.mkv"))
                 .renderFragmentMetadata(false)
                 .build();
 

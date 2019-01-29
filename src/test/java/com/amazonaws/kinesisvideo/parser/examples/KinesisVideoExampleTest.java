@@ -36,12 +36,12 @@ public class KinesisVideoExampleTest {
         KinesisVideoExample example = KinesisVideoExample.builder().region(Regions.US_WEST_2)
                 .streamName("myTestStream")
                 .credentialsProvider(new ProfileCredentialsProvider())
-                .inputVideoStream(TestResourceUtil.getTestInputStream("clusters.mkv"))
+                .inputVideoStream(TestResourceUtil.getTestInputStream("vogels.mkv"))
                 .build();
 
         example.execute();
-        Assert.assertEquals(8, example.getFragmentsPersisted());
-        Assert.assertEquals(8, example.getFragmentsRead());
+        Assert.assertEquals(9, example.getFragmentsPersisted());
+        Assert.assertEquals(9, example.getFragmentsRead());
     }
 
     @Ignore

@@ -30,27 +30,36 @@ public class FrameVisitor extends CompositeMkvElementVisitor {
     private final FragmentMetadataVisitor fragmentMetadataVisitor;
     private final FrameVisitorInternal frameVisitorInternal;
     private final FrameProcessor frameProcessor;
+    private final Optional<Long> trackNumber;
     private final Optional<FragmentMetadataVisitor.MkvTagProcessor> tagProcessor;
 
-    private FrameVisitor(FragmentMetadataVisitor fragmentMetadataVisitor,
-                         Optional<FragmentMetadataVisitor.MkvTagProcessor> tagProcessor,
-                         FrameProcessor frameProcessor) {
+    private FrameVisitor(final FragmentMetadataVisitor fragmentMetadataVisitor,
+                         final Optional<FragmentMetadataVisitor.MkvTagProcessor> tagProcessor,
+                         final FrameProcessor frameProcessor, final Optional<Long> trackNumber) {
         super(fragmentMetadataVisitor);
         this.fragmentMetadataVisitor = fragmentMetadataVisitor;
         this.frameVisitorInternal = new FrameVisitorInternal();
         this.childVisitors.add(this.frameVisitorInternal);
         this.frameProcessor = frameProcessor;
         this.tagProcessor = tagProcessor;
+        this.trackNumber = trackNumber;
     }
 
-    public static FrameVisitor create(FrameProcessor frameProcessor) {
-        return new FrameVisitor(FragmentMetadataVisitor.create(), Optional.empty(), frameProcessor);
+    public static FrameVisitor create(final FrameProcessor frameProcessor) {
+        return new FrameVisitor(FragmentMetadataVisitor.create(), Optional.empty(), frameProcessor, Optional.empty());
     }
 
-    public static FrameVisitor create(FrameProcessor frameProcessor,
-                                      Optional<FragmentMetadataVisitor.MkvTagProcessor> tagProcessor) {
+    public static FrameVisitor create(final FrameProcessor frameProcessor,
+                                      final Optional<FragmentMetadataVisitor.MkvTagProcessor> tagProcessor) {
         return new FrameVisitor(FragmentMetadataVisitor.create(tagProcessor),
-                tagProcessor, frameProcessor);
+                tagProcessor, frameProcessor, Optional.empty());
+    }
+
+    public static FrameVisitor create(final FrameProcessor frameProcessor,
+                                      final Optional<FragmentMetadataVisitor.MkvTagProcessor> tagProcessor,
+                                      final Optional<Long> trackNumber) {
+        return new FrameVisitor(FragmentMetadataVisitor.create(tagProcessor),
+                tagProcessor, frameProcessor, trackNumber);
     }
 
     public void close() {
@@ -58,14 +67,15 @@ public class FrameVisitor extends CompositeMkvElementVisitor {
     }
 
     public interface FrameProcessor extends AutoCloseable {
-        default void process(Frame frame, MkvTrackMetadata trackMetadata,
-                             Optional<FragmentMetadata> fragmentMetadata) throws FrameProcessException {
+        default void process(final Frame frame, final MkvTrackMetadata trackMetadata,
+                             final Optional<FragmentMetadata> fragmentMetadata) throws FrameProcessException {
             throw new NotImplementedException("Default FrameVisitor.FrameProcessor");
         }
 
-        default void process(Frame frame, MkvTrackMetadata trackMetadata,
-                             Optional<FragmentMetadata> fragmentMetadata,
-                             Optional<FragmentMetadataVisitor.MkvTagProcessor> tagProcessor) throws FrameProcessException {
+        default void process(final Frame frame, final MkvTrackMetadata trackMetadata,
+                             final Optional<FragmentMetadata> fragmentMetadata,
+                             final Optional<FragmentMetadataVisitor.MkvTagProcessor> tagProcessor)
+                             throws FrameProcessException {
             if (tagProcessor.isPresent()) {
                 throw new NotImplementedException("Default FrameVisitor.FrameProcessor");
             } else {
@@ -82,12 +92,12 @@ public class FrameVisitor extends CompositeMkvElementVisitor {
 
     private class FrameVisitorInternal extends MkvElementVisitor {
         @Override
-        public void visit(com.amazonaws.kinesisvideo.parser.mkv.MkvStartMasterElement startMasterElement)
+        public void visit(final com.amazonaws.kinesisvideo.parser.mkv.MkvStartMasterElement startMasterElement)
                 throws com.amazonaws.kinesisvideo.parser.mkv.MkvElementVisitException {
         }
 
         @Override
-        public void visit(com.amazonaws.kinesisvideo.parser.mkv.MkvEndMasterElement endMasterElement)
+        public void visit(final com.amazonaws.kinesisvideo.parser.mkv.MkvEndMasterElement endMasterElement)
                 throws com.amazonaws.kinesisvideo.parser.mkv.MkvElementVisitException {
             if (tagProcessor.isPresent()
                     && MkvTypeInfos.CLUSTER.equals(endMasterElement.getElementMetaData().getTypeInfo())) {
@@ -96,17 +106,20 @@ public class FrameVisitor extends CompositeMkvElementVisitor {
         }
 
         @Override
-        public void visit(com.amazonaws.kinesisvideo.parser.mkv.MkvDataElement dataElement)
+        public void visit(final com.amazonaws.kinesisvideo.parser.mkv.MkvDataElement dataElement)
                 throws com.amazonaws.kinesisvideo.parser.mkv.MkvElementVisitException {
             if (MkvTypeInfos.SIMPLEBLOCK.equals(dataElement.getElementMetaData().getTypeInfo())) {
-                MkvValue<Frame> frame = dataElement.getValueCopy();
+                final MkvValue<Frame> frame = dataElement.getValueCopy();
                 Validate.notNull(frame);
-                MkvTrackMetadata trackMetadata =
-                        fragmentMetadataVisitor.getMkvTrackMetadata(frame.getVal().getTrackNumber());
+                final long frameTrackNo = frame.getVal().getTrackNumber();
+                final MkvTrackMetadata trackMetadata =
+                        fragmentMetadataVisitor.getMkvTrackMetadata(frameTrackNo);
 
-                frameProcessor.process(frame.getVal(), trackMetadata,
-                        fragmentMetadataVisitor.getCurrentFragmentMetadata(),
-                        tagProcessor);
+                if (trackNumber.orElse(frameTrackNo) == frameTrackNo) {
+                    frameProcessor.process(frame.getVal(), trackMetadata,
+                            fragmentMetadataVisitor.getCurrentFragmentMetadata(),
+                            tagProcessor);
+                }
             }
         }
     }

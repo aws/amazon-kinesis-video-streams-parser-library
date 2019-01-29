@@ -34,6 +34,7 @@ public class H264BoundingBoxFrameRenderer extends H264FrameRenderer {
 
     private final KinesisVideoBoundingBoxFrameViewer kinesisVideoBoundingBoxFrameViewer;
     private final RekognizedFragmentsIndex rekognizedFragmentsIndex;
+    private RekognizedOutput currentRekognizedOutput = null;
 
     @Setter
     private int maxTimeout = DEFAULT_MAX_TIMEOUT;
@@ -47,15 +48,15 @@ public class H264BoundingBoxFrameRenderer extends H264FrameRenderer {
         this.rekognizedFragmentsIndex = rekognizedFragmentsIndex;
     }
 
-    public static H264BoundingBoxFrameRenderer create(KinesisVideoBoundingBoxFrameViewer kinesisVideoBoundingBoxFrameViewer,
-                                                      RekognizedFragmentsIndex rekognizedFragmentsIndex) {
+    public static H264BoundingBoxFrameRenderer create(final KinesisVideoBoundingBoxFrameViewer kinesisVideoBoundingBoxFrameViewer,
+                                                      final RekognizedFragmentsIndex rekognizedFragmentsIndex) {
         return new H264BoundingBoxFrameRenderer(kinesisVideoBoundingBoxFrameViewer, rekognizedFragmentsIndex);
     }
 
     @Override
-    public void process(Frame frame, MkvTrackMetadata trackMetadata, Optional<FragmentMetadata> fragmentMetadata) {
+    public void process(final Frame frame, final MkvTrackMetadata trackMetadata, final Optional<FragmentMetadata> fragmentMetadata) {
         final BufferedImage bufferedImage = decodeH264Frame(frame, trackMetadata);
-        Optional<RekognizedOutput> rekognizedOutput = getRekognizedOutput(frame, fragmentMetadata);
+        final Optional<RekognizedOutput> rekognizedOutput = getRekognizedOutput(frame, fragmentMetadata);
         renderFrame(bufferedImage, rekognizedOutput);
     }
 
@@ -117,7 +118,7 @@ public class H264BoundingBoxFrameRenderer extends H264FrameRenderer {
                     rekognizedOutputs.remove(rekognizedOutput.get());
                     if (rekognizedOutputs.isEmpty()) {
                         log.debug("All frames processed for this fragment number : {}", fragmentNumber);
-                        rekognizedFragmentsIndex.removeFromIndex(fragmentNumber);
+                        rekognizedFragmentsIndex.remove(fragmentNumber);
                     }
                 }
             }
@@ -129,21 +130,27 @@ public class H264BoundingBoxFrameRenderer extends H264FrameRenderer {
         return Math.abs(frameOffset - (output.getFrameOffsetInSeconds() * MILLIS_IN_SEC)) <= OFFSET_DELTA_THRESHOLD;
     }
 
-    void renderFrame(BufferedImage bufferedImage, Optional<RekognizedOutput> rekognizedOutput) {
+    void renderFrame(final BufferedImage bufferedImage, final Optional<RekognizedOutput> rekognizedOutput) {
         if (rekognizedOutput.isPresent()) {
+            System.out.println("Rendering Rekognized sampled frame...");
             kinesisVideoBoundingBoxFrameViewer.update(bufferedImage, rekognizedOutput.get());
+            currentRekognizedOutput = rekognizedOutput.get();
+        } else if (currentRekognizedOutput != null) {
+            System.out.println("Rendering non-sampled frame with previous rekognized results...");
+            kinesisVideoBoundingBoxFrameViewer.update(bufferedImage, currentRekognizedOutput);
         } else {
+            System.out.println("Rendering frame without any rekognized results...");
             kinesisVideoBoundingBoxFrameViewer.update(bufferedImage);
         }
     }
 
 
-    private long waitForResults(long timeout) {
+    private long waitForResults(final long timeout) {
         final long startTime = System.currentTimeMillis();
         try {
             log.info("No rekognized results for this fragment number. Waiting ....");
             Thread.sleep(timeout);
-        } catch (InterruptedException e) {
+        } catch (final InterruptedException e) {
             log.warn("Error while waiting for rekognized output !", e);
         }
         return System.currentTimeMillis() - startTime;
