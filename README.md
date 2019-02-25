@@ -160,6 +160,9 @@ To run the sample follow the below steps:
  the new Kinesis Video stream might be delayed significantly.
 
 ## Release Notes
+### Release 1.0.10 (Feb 2019)
+* Bugfix: Close GetMedia connection to fix the connection leak issue.
+
 ### Release 1.0.9 (Jan 2019)
 * Added KinesisVideo Rekgonition Lamba example which combines Rekognition output with KVS fragments to draw bounding boxes
 for detected faces and ingest into new KVS Stream.
