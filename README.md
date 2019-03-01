@@ -160,6 +160,9 @@ To run the sample follow the below steps:
  the new Kinesis Video stream might be delayed significantly.
 
 ## Release Notes
+### Release 1.0.11 (Mar 2019)
+* Bugfix: KinesisVideoRekognitionIntegrationExample broken because the frame process callback is not invoked.
+
 ### Release 1.0.10 (Feb 2019)
 * Bugfix: Close GetMedia connection to fix the connection leak issue.
 
