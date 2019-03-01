@@ -54,7 +54,8 @@ public class H264BoundingBoxFrameRenderer extends H264FrameRenderer {
     }
 
     @Override
-    public void process(final Frame frame, final MkvTrackMetadata trackMetadata, final Optional<FragmentMetadata> fragmentMetadata) {
+    public void process(final Frame frame, final MkvTrackMetadata trackMetadata, final Optional<FragmentMetadata> fragmentMetadata,
+                        final Optional<FragmentMetadataVisitor.MkvTagProcessor> tagProcessor) {
         final BufferedImage bufferedImage = decodeH264Frame(frame, trackMetadata);
         final Optional<RekognizedOutput> rekognizedOutput = getRekognizedOutput(frame, fragmentMetadata);
         renderFrame(bufferedImage, rekognizedOutput);
