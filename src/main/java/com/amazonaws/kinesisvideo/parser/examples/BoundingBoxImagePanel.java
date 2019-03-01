@@ -26,26 +26,27 @@ import com.amazonaws.kinesisvideo.parser.rekognition.pojo.RekognizedOutput;
 /**
  * Panel which is used for rendering frames and embedding bounding boxes on the frames.
  */
-class BoundingBoxImagePanel extends ImagePanel {
+public class BoundingBoxImagePanel extends ImagePanel {
     private static final String DELIMITER = "-";
-    private RekognizedOutput rekognizedOutput;
 
     @Override
-    public void paintComponent(Graphics g) {
-        Graphics2D g2 = (Graphics2D) g;
+    public void paintComponent(final Graphics g) {
         super.paintComponent(g);
+    }
 
+    public void processRekognitionOutput(final Graphics2D g2, final int width, final int height,
+                                          final RekognizedOutput rekognizedOutput) {
         if (rekognizedOutput != null) {
 
             // Draw bounding boxes for faces.
             if (rekognizedOutput.getFaceSearchOutputs() != null) {
-                for (RekognizedOutput.FaceSearchOutput faceSearchOutput: rekognizedOutput.getFaceSearchOutputs()) {
-                    FaceType detectedFaceType;
-                    String title;
+                for (final RekognizedOutput.FaceSearchOutput faceSearchOutput : rekognizedOutput.getFaceSearchOutputs()) {
+                    final FaceType detectedFaceType;
+                    final String title;
                     if (!faceSearchOutput.getMatchedFaceList().isEmpty()) {
                         // Taking First match as Rekognition returns set of matched faces sorted by confidence level
-                        MatchedFace matchedFace = faceSearchOutput.getMatchedFaceList().get(0);
-                        String externalImageId = matchedFace.getFace().getExternalImageId();
+                        final MatchedFace matchedFace = faceSearchOutput.getMatchedFaceList().get(0);
+                        final String externalImageId = matchedFace.getFace().getExternalImageId();
                         // Rekognition doesn't allow any extra attributes/tags to be associated with the 'Face'.
                         // External Image Id is used here to draw title on top of the bounding box and change color
                         // of the bounding box (based on the FaceType). External Image Id needs to be specified in
@@ -56,7 +57,7 @@ class BoundingBoxImagePanel extends ImagePanel {
                             title = matchedFace.getFace().getConfidence() + "";
                             detectedFaceType = FaceType.NOT_RECOGNIZED;
                         } else {
-                            String[] imageIds = externalImageId.split(DELIMITER);
+                            final String[] imageIds = externalImageId.split(DELIMITER);
                             if (imageIds.length > 1) {
                                 title = imageIds[0];
                                 detectedFaceType = FaceType.valueOf(imageIds[1].toUpperCase());
@@ -69,44 +70,47 @@ class BoundingBoxImagePanel extends ImagePanel {
                         detectedFaceType = FaceType.NOT_RECOGNIZED;
                         title = "Not recognized";
                     }
-                    drawFaces(g2, faceSearchOutput.getDetectedFace().getBoundingBox(),
+                    drawFaces(g2, width, height, faceSearchOutput.getDetectedFace().getBoundingBox(),
                             title, detectedFaceType.getColor());
                 }
             }
         }
     }
 
-    private void drawFaces(Graphics2D g2, BoundingBox boundingBox, String personName, Color color) {
-        Color c = g2.getColor();
+    private void drawFaces(final Graphics2D g2, final int width, final int height,
+                                  final BoundingBox boundingBox, final String personName, final Color color) {
+        final Color c = g2.getColor();
 
         g2.setColor(color);
         // Draw bounding box
-        drawBoundingBox(g2, boundingBox);
+        drawBoundingBox(g2, width, height, boundingBox);
 
         // Draw title
-        drawFaceTitle(g2, boundingBox, personName);
+        drawFaceTitle(g2, width, height, boundingBox, personName);
         g2.setColor(c);
     }
 
-    private void drawFaceTitle(Graphics2D g2, BoundingBox boundingBox, String personName) {
-        int left = (int) (boundingBox.getLeft() * image.getWidth());
-        int top = (int) (boundingBox.getTop() * image.getHeight());
+    private void drawFaceTitle(final Graphics2D g2, final int width, final int height,
+                                      final BoundingBox boundingBox, final String personName) {
+        final int left = (int) (boundingBox.getLeft() * width);
+        final int top = (int) (boundingBox.getTop() * height);
         g2.drawString(personName, left, top);
     }
 
-    private void drawBoundingBox(Graphics2D g2, BoundingBox boundingBox) {
-        int left = (int) (boundingBox.getLeft() * image.getWidth());
-        int top = (int) (boundingBox.getTop() * image.getHeight());
-        int width = (int) (boundingBox.getWidth() * image.getWidth());
-        int height = (int) (boundingBox.getHeight() * image.getHeight());
+    private void drawBoundingBox(final Graphics2D g2, final int width, final int height,
+                                 final BoundingBox boundingBox) {
+        final int left = (int) (boundingBox.getLeft() * width);
+        final int top = (int) (boundingBox.getTop() * height);
+        final int bbWidth = (int) (boundingBox.getWidth() * width);
+        final int bbHeight = (int) (boundingBox.getHeight() * height);
 
         // Draw bounding box
-        g2.drawRect(left, top, width, height);
+        g2.drawRect(left, top, bbWidth, bbHeight);
     }
 
-    public void setImage(BufferedImage bufferedImage, RekognizedOutput rekognizedOutput) {
+    public void setImage(final BufferedImage bufferedImage, final RekognizedOutput rekognizedOutput) {
         this.image = bufferedImage;
-        this.rekognizedOutput = rekognizedOutput;
+        processRekognitionOutput(image.createGraphics(), image.getWidth(), image.getHeight(), rekognizedOutput);
         repaint();
     }
 }

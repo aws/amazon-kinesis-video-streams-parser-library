@@ -31,9 +31,10 @@ import com.amazonaws.services.kinesisvideo.model.GetMediaResult;
 import com.amazonaws.services.kinesisvideo.model.StartSelector;
 import com.amazonaws.services.kinesisvideo.model.StartSelectorType;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.Validate;
+import org.apache.commons.lang3.Validate;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -87,39 +88,54 @@ public class ContinuousGetMediaWorker extends KinesisVideoCommon implements Runn
     public void run() {
         log.info("Start ContinuousGetMedia worker for stream {}", streamName);
         while (!shouldStop.get()) {
+            GetMediaResult getMediaResult = null;
             try {
 
                 StartSelector selectorToUse = fragmentNumberToStartAfter.map(fn -> new StartSelector().withStartSelectorType(StartSelectorType.FRAGMENT_NUMBER)
                         .withAfterFragmentNumber(fn)).orElse(startSelector);
 
-                GetMediaResult result = videoMedia.getMedia(new GetMediaRequest().withStreamName(streamName).withStartSelector(selectorToUse));
+                getMediaResult = videoMedia.getMedia(new GetMediaRequest().withStreamName(streamName).withStartSelector(selectorToUse));
                 log.info("Start processing GetMedia called for stream {} response {} requestId {}",
                         streamName,
-                        result.getSdkHttpMetadata().getHttpStatusCode(),
-                        result.getSdkResponseMetadata().getRequestId());
+                        getMediaResult.getSdkHttpMetadata().getHttpStatusCode(),
+                        getMediaResult.getSdkResponseMetadata().getRequestId());
 
-                if (result.getSdkHttpMetadata().getHttpStatusCode() == HTTP_STATUS_OK) {
+                if (getMediaResult.getSdkHttpMetadata().getHttpStatusCode() == HTTP_STATUS_OK) {
                     try (GetMediaResponseStreamConsumer consumer = consumerFactory.createConsumer()) {
-                        consumer.process(result.getPayload(), this::updateFragmentNumberToStartAfter);
+                        consumer.process(getMediaResult.getPayload(), this::updateFragmentNumberToStartAfter);
                     }
                 } else {
                     Thread.sleep(200);
                 }
             } catch (FrameProcessException e) {
-                log.error("FrameProcessException in ContinuousGetMedia worker for stream {} {}", streamName, e);
+                log.error("FrameProcessException in ContinuousGetMedia worker for stream: " + streamName, e);
                 break;
             } catch (IOException | MkvElementVisitException e) {
-                log.error("Failure in ContinuousGetMedia worker for stream {} {}", streamName, e);
+                log.error("Failure in ContinuousGetMedia worker for stream: " + streamName, e);
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
                 throw new RuntimeException(ie);
             } catch (Throwable t) {
                 log.error("Throwable",t);
             } finally {
+                closeGetMediaResponse(getMediaResult);
                 log.info("Exit processing GetMedia called for stream {}", streamName);
             }
         }
         log.info("Exit ContinuousGetMedia worker for stream {}", streamName);
+    }
+
+    private void closeGetMediaResponse(final GetMediaResult getMediaResult) {
+        if (getMediaResult != null) {
+            final InputStream payload = getMediaResult.getPayload();
+            if (payload != null) {
+                try {
+                    payload.close();
+                } catch (final IOException e) {
+                    // Ignore close exception;
+                }
+            }
+        }
     }
 
     private void updateFragmentNumberToStartAfter(FragmentMetadata f) {

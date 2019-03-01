@@ -17,8 +17,6 @@ import com.amazonaws.kinesisvideo.parser.ebml.InputStreamParserByteSource;
 import com.amazonaws.kinesisvideo.parser.mkv.MkvElementVisitException;
 import com.amazonaws.kinesisvideo.parser.mkv.MkvElementVisitor;
 import com.amazonaws.kinesisvideo.parser.mkv.StreamingMkvReader;
-import com.amazonaws.kinesisvideo.parser.mkv.visitors.CompositeMkvElementVisitor;
-import com.amazonaws.kinesisvideo.parser.utilities.OutputSegmentMerger;
 
 import java.io.IOException;
 import java.io.InputStream;

@@ -33,7 +33,7 @@ import java.util.List;
 
 public class FrameRendererTest {
     // long running test
-    @Ignore
+
     @Test
     public void frameCountTest() throws IOException, MkvElementVisitException {
         final InputStream in = TestResourceUtil.getTestInputStream("kinesis_video_renderer_example_output.mkv");
@@ -48,8 +48,8 @@ public class FrameRendererTest {
         StreamingMkvReader mkvStreamReader =
                 StreamingMkvReader.createDefault(new InputStreamParserByteSource(in));
 
-        CountVisitor countVisitor =
-                CountVisitor.create(MkvTypeInfos.CLUSTER, MkvTypeInfos.SEGMENT, MkvTypeInfos.SIMPLEBLOCK);
+        CountVisitor countVisitor = CountVisitor.create(
+                MkvTypeInfos.CLUSTER, MkvTypeInfos.SEGMENT, MkvTypeInfos.SIMPLEBLOCK, MkvTypeInfos.TRACKS);
 
         mkvStreamReader.apply(new CompositeMkvElementVisitor(countVisitor, FrameVisitor.create(frameRenderer)));
 
@@ -61,4 +61,37 @@ public class FrameRendererTest {
         ByteBuffer codecPrivateDataFromFrame = frameRenderer.getCodecPrivateData();
         Assert.assertEquals(ByteBuffer.wrap(codecPrivateData), codecPrivateDataFromFrame);
     }
+
+    /**
+     * Test jcodec decoding a frame from an mkv that has a pixel width/height that isn't a multiple of 16
+     */
+    @Test
+    public void frameCountTest2() throws IOException, MkvElementVisitException {
+        final InputStream in = TestResourceUtil.getTestInputStream("output_get_media.mkv");
+        byte[] codecPrivateData = new byte[]{
+                0x01, 0x4d, 0x40, 0x1e, 0x03, 0x01, 0x00, 0x27, 0x27, 0x4d, 0x40, 0x1e,
+                (byte) 0xb9, 0x10, 0x14, 0x05, (byte) 0xff, 0x2e, 0x02, (byte) 0xd4, 0x04, 0x04, 0x07, (byte) 0xc0,
+                0x00, 0x00, 0x03, 0x00, 0x40, 0x00, 0x00, 0x0f, 0x38, (byte) 0xa0, 0x00, 0x3d,
+                0x09, 0x00, 0x07, (byte) 0xa1, 0x3b, (byte) 0xde, (byte) 0xe0, 0x3e, 0x11, 0x08, (byte) 0xd4, 0x01,
+                0x00, 0x04, 0x28, (byte) 0xfe, 0x3c, (byte) 0x80
+        };
+
+        H264FrameRenderer frameRenderer = H264FrameRenderer.create(new KinesisVideoFrameViewer(0, 0));
+        StreamingMkvReader mkvStreamReader =
+                StreamingMkvReader.createDefault(new InputStreamParserByteSource(in));
+
+        CountVisitor countVisitor = CountVisitor.create(
+                MkvTypeInfos.CLUSTER, MkvTypeInfos.SEGMENT, MkvTypeInfos.SIMPLEBLOCK, MkvTypeInfos.TRACKS);
+
+        mkvStreamReader.apply(new CompositeMkvElementVisitor(countVisitor, FrameVisitor.create(frameRenderer)));
+
+        Assert.assertEquals(5, countVisitor.getCount(MkvTypeInfos.TRACKS));
+        Assert.assertEquals(5, countVisitor.getCount(MkvTypeInfos.CLUSTER));
+        Assert.assertEquals(300, countVisitor.getCount(MkvTypeInfos.SIMPLEBLOCK));
+
+        Assert.assertEquals(300, frameRenderer.getFrameCount());
+        ByteBuffer codecPrivateDataFromFrame = frameRenderer.getCodecPrivateData();
+        Assert.assertEquals(ByteBuffer.wrap(codecPrivateData), codecPrivateDataFromFrame);
+    }
+
 }

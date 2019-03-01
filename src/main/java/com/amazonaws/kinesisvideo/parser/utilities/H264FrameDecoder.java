@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and limitations 
 package com.amazonaws.kinesisvideo.parser.utilities;
 
 import com.amazonaws.kinesisvideo.parser.mkv.Frame;
+import com.amazonaws.kinesisvideo.parser.mkv.FrameProcessException;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.jcodec.codecs.h264.H264Decoder;
@@ -31,6 +32,9 @@ import java.util.Optional;
 
 import static org.jcodec.codecs.h264.H264Utils.splitMOVPacket;
 
+/**
+ * H264 Frame Decoder class which uses JCodec decoder to decode frames.
+ */
 @Slf4j
 public class H264FrameDecoder implements FrameVisitor.FrameProcessor  {
 
@@ -43,40 +47,42 @@ public class H264FrameDecoder implements FrameVisitor.FrameProcessor  {
     private byte[] codecPrivateData;
 
     @Override
-    public void process(Frame frame, MkvTrackMetadata trackMetadata, Optional<FragmentMetadata> fragmentMetadata) {
+    public void process(final Frame frame, final MkvTrackMetadata trackMetadata,
+                        final Optional<FragmentMetadata> fragmentMetadata) {
         decodeH264Frame(frame, trackMetadata);
     }
 
-    protected BufferedImage decodeH264Frame(Frame frame, MkvTrackMetadata trackMetadata) {
-        ByteBuffer frameBuffer = frame.getFrameData();
-        int pixelWidth = trackMetadata.getPixelWidth().get().intValue();
-        int pixelHeight = trackMetadata.getPixelHeight().get().intValue();
+    public BufferedImage decodeH264Frame(final Frame frame, final MkvTrackMetadata trackMetadata) {
+        final ByteBuffer frameBuffer = frame.getFrameData();
+        final int pixelWidth = trackMetadata.getPixelWidth().get().intValue();
+        final int pixelHeight = trackMetadata.getPixelHeight().get().intValue();
         codecPrivateData = trackMetadata.getCodecPrivateData().array();
         log.debug("Decoding frames ... ");
         // Read the bytes that appear to comprise the header
         // See: https://www.matroska.org/technical/specs/index.html#simpleblock_structure
 
-        Picture rgb = Picture.create(pixelWidth, pixelHeight, ColorSpace.RGB);
-        BufferedImage bufferedImage = new BufferedImage(pixelWidth, pixelHeight, BufferedImage.TYPE_3BYTE_BGR);
-        AvcCBox avcC = AvcCBox.parseAvcCBox(ByteBuffer.wrap(codecPrivateData));
+        final Picture rgb = Picture.create(pixelWidth, pixelHeight, ColorSpace.RGB);
+        final BufferedImage bufferedImage = new BufferedImage(pixelWidth, pixelHeight, BufferedImage.TYPE_3BYTE_BGR);
+        final AvcCBox avcC = AvcCBox.parseAvcCBox(ByteBuffer.wrap(codecPrivateData));
 
         decoder.addSps(avcC.getSpsList());
         decoder.addPps(avcC.getPpsList());
 
-        Picture buf = Picture.create(pixelWidth, pixelHeight, ColorSpace.YUV420J);
-        List<ByteBuffer> byteBuffers = splitMOVPacket(frameBuffer, avcC);
-        Picture pic = decoder.decodeFrameFromNals(byteBuffers, buf.getData());
+        final Picture buf = Picture.create(pixelWidth + ((16 - (pixelWidth % 16)) % 16),
+                pixelHeight + ((16 - (pixelHeight % 16)) % 16), ColorSpace.YUV420J);
+        final List<ByteBuffer> byteBuffers = splitMOVPacket(frameBuffer, avcC);
+        final Picture pic = decoder.decodeFrameFromNals(byteBuffers, buf.getData());
 
         if (pic != null) {
             // Work around for color issues in JCodec
             // https://github.com/jcodec/jcodec/issues/59
             // https://github.com/jcodec/jcodec/issues/192
-            byte[][] dataTemp = new byte[3][pic.getData().length];
+            final byte[][] dataTemp = new byte[3][pic.getData().length];
             dataTemp[0] = pic.getPlaneData(0);
             dataTemp[1] = pic.getPlaneData(2);
             dataTemp[2] = pic.getPlaneData(1);
 
-            Picture tmpBuf = Picture.createPicture(pixelWidth, pixelHeight, dataTemp, ColorSpace.YUV420J);
+            final Picture tmpBuf = Picture.createPicture(pixelWidth, pixelHeight, dataTemp, ColorSpace.YUV420J);
             transform.transform(tmpBuf, rgb);
             AWTUtil.toBufferedImage(rgb, bufferedImage);
             frameCount++;

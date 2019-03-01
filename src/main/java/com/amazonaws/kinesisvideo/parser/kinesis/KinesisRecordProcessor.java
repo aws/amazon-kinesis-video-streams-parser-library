@@ -66,6 +66,7 @@ public class KinesisRecordProcessor implements IRecordProcessor {
     // Backoff and retry settings
     private static final long BACKOFF_TIME_IN_MILLIS = 3000L;
     private static final int NUM_RETRIES = 10;
+    private static final String DELIMITER = "$";
 
     // Checkpoint about once a minute
     private static final long CHECKPOINT_INTERVAL_MILLIS = 1000L;
@@ -74,8 +75,9 @@ public class KinesisRecordProcessor implements IRecordProcessor {
     private final CharsetDecoder decoder = Charset.forName("UTF-8").newDecoder();
 
     private final RekognizedFragmentsIndex rekognizedFragmentsIndex;
+    private StringBuilder stringBuilder = new StringBuilder();
 
-    public KinesisRecordProcessor(RekognizedFragmentsIndex rekognizedFragmentsIndex, AWSCredentialsProvider awsCredentialsProvider) {
+    public KinesisRecordProcessor(final RekognizedFragmentsIndex rekognizedFragmentsIndex, final AWSCredentialsProvider awsCredentialsProvider) {
         this.rekognizedFragmentsIndex = rekognizedFragmentsIndex;
     }
 
@@ -83,7 +85,7 @@ public class KinesisRecordProcessor implements IRecordProcessor {
      * {@inheritDoc}
      */
     @Override
-    public void initialize(String shardId) {
+    public void initialize(final String shardId) {
         LOG.info("Initializing record processor for shard: " + shardId);
         this.kinesisShardId = shardId;
     }
@@ -92,7 +94,7 @@ public class KinesisRecordProcessor implements IRecordProcessor {
      * {@inheritDoc}
      */
     @Override
-    public void processRecords(List<Record> records, IRecordProcessorCheckpointer checkpointer) {
+    public void processRecords(final List<Record> records, final IRecordProcessorCheckpointer checkpointer) {
         LOG.info("Processing " + records.size() + " records from " + kinesisShardId);
 
         // Process records and perform all exception handling.
@@ -110,22 +112,22 @@ public class KinesisRecordProcessor implements IRecordProcessor {
      *
      * @param records Data records to be processed.
      */
-    private void processRecordsWithRetries(List<Record> records) {
-        for (Record record : records) {
+    private void processRecordsWithRetries(final List<Record> records) {
+        for (final Record record : records) {
             boolean processedSuccessfully = false;
             for (int i = 0; i < NUM_RETRIES; i++) {
                 try {
                     processSingleRecord(record);
                     processedSuccessfully = true;
                     break;
-                } catch (Throwable t) {
+                } catch (final Throwable t) {
                     LOG.warn("Caught throwable while processing record " + record, t);
                 }
 
                 // backoff if we encounter an exception.
                 try {
                     Thread.sleep(BACKOFF_TIME_IN_MILLIS);
-                } catch (InterruptedException e) {
+                } catch (final InterruptedException e) {
                     LOG.debug("Interrupted sleep", e);
                 }
             }
@@ -141,16 +143,17 @@ public class KinesisRecordProcessor implements IRecordProcessor {
      *
      * @param record The record to be processed.
      */
-    private void processSingleRecord(Record record) {
-        // TODO Add your own record processing logic here
+    private void processSingleRecord(final Record record) {
 
         String data = null;
-        ObjectMapper mapper = new ObjectMapper();
+        final ObjectMapper mapper = new ObjectMapper();
         try {
             // For this app, we interpret the payload as UTF-8 chars.
-            ByteBuffer buffer = record.getData();
+            final ByteBuffer buffer = record.getData();
             data = new String(buffer.array(), "UTF-8");
-            RekognitionOutput output = mapper.readValue(data, RekognitionOutput.class);
+            stringBuilder = stringBuilder.append(data).append(DELIMITER);
+
+            final RekognitionOutput output = mapper.readValue(data, RekognitionOutput.class);
 
             // Get the fragment number from Rekognition Output
             final String fragmentNumber = output
@@ -180,12 +183,12 @@ public class KinesisRecordProcessor implements IRecordProcessor {
                     .build();
 
             // Add face search response
-            List<FaceSearchResponse> responses = output.getFaceSearchResponse();
+            final List<FaceSearchResponse> responses = output.getFaceSearchResponse();
 
-            for (FaceSearchResponse response : responses) {
-                DetectedFace detectedFace = response.getDetectedFace();
-                List<MatchedFace> matchedFaces = response.getMatchedFaces();
-                RekognizedOutput.FaceSearchOutput faceSearchOutput = RekognizedOutput.FaceSearchOutput.builder()
+            for (final FaceSearchResponse response : responses) {
+                final DetectedFace detectedFace = response.getDetectedFace();
+                final List<MatchedFace> matchedFaces = response.getMatchedFaces();
+                final RekognizedOutput.FaceSearchOutput faceSearchOutput = RekognizedOutput.FaceSearchOutput.builder()
                         .detectedFace(detectedFace)
                         .matchedFaceList(matchedFaces)
                         .build();
@@ -193,17 +196,18 @@ public class KinesisRecordProcessor implements IRecordProcessor {
             }
 
             // Add it to the index
-            rekognizedFragmentsIndex.addToMap(fragmentNumber, rekognizedOutput);
+            rekognizedFragmentsIndex.add(fragmentNumber, producerTimestamp.longValue(),
+                    serverTimestamp.longValue(), rekognizedOutput);
 
-        } catch (NumberFormatException e) {
+        } catch (final NumberFormatException e) {
             LOG.info("Record does not match sample record format. Ignoring record with data; " + data);
-        } catch (UnsupportedEncodingException e) {
+        } catch (final UnsupportedEncodingException e) {
             e.printStackTrace();
-        } catch (JsonParseException e) {
+        } catch (final JsonParseException e) {
             e.printStackTrace();
-        } catch (JsonMappingException e) {
+        } catch (final JsonMappingException e) {
             e.printStackTrace();
-        } catch (IOException e) {
+        } catch (final IOException e) {
             e.printStackTrace();
         }
     }
@@ -212,7 +216,7 @@ public class KinesisRecordProcessor implements IRecordProcessor {
      * {@inheritDoc}
      */
     @Override
-    public void shutdown(IRecordProcessorCheckpointer checkpointer, ShutdownReason reason) {
+    public void shutdown(final IRecordProcessorCheckpointer checkpointer, final ShutdownReason reason) {
         LOG.info("Shutting down record processor for shard: " + kinesisShardId);
         // Important to checkpoint after reaching end of shard, so we can start processing data from child shards.
         if (reason == ShutdownReason.TERMINATE) {
@@ -223,17 +227,17 @@ public class KinesisRecordProcessor implements IRecordProcessor {
     /** Checkpoint with retries.
      * @param checkpointer
      */
-    private void checkpoint(IRecordProcessorCheckpointer checkpointer) {
+    private void checkpoint(final IRecordProcessorCheckpointer checkpointer) {
         LOG.info("Checkpointing shard " + kinesisShardId);
         for (int i = 0; i < NUM_RETRIES; i++) {
             try {
                 checkpointer.checkpoint();
                 break;
-            } catch (ShutdownException se) {
+            } catch (final ShutdownException se) {
                 // Ignore checkpoint if the processor instance has been shutdown (fail over).
                 LOG.info("Caught shutdown exception, skipping checkpoint.", se);
                 break;
-            } catch (ThrottlingException e) {
+            } catch (final ThrottlingException e) {
                 // Backoff and re-attempt checkpoint upon transient failures
                 if (i >= (NUM_RETRIES - 1)) {
                     LOG.error("Checkpoint failed after " + (i + 1) + "attempts.", e);
@@ -242,14 +246,14 @@ public class KinesisRecordProcessor implements IRecordProcessor {
                     LOG.info("Transient issue when checkpointing - attempt " + (i + 1) + " of "
                             + NUM_RETRIES, e);
                 }
-            } catch (InvalidStateException e) {
+            } catch (final InvalidStateException e) {
                 // This indicates an issue with the DynamoDB table (check for table, provisioned IOPS).
                 LOG.error("Cannot save checkpoint to the DynamoDB table used by the Amazon Kinesis Client Library.", e);
                 break;
             }
             try {
                 Thread.sleep(BACKOFF_TIME_IN_MILLIS);
-            } catch (InterruptedException e) {
+            } catch (final InterruptedException e) {
                 LOG.debug("Interrupted sleep", e);
             }
         }
