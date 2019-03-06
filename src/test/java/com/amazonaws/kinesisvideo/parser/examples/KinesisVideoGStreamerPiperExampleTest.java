@@ -46,6 +46,7 @@ public class KinesisVideoGStreamerPiperExampleTest {
         String gStreamerPipelineArgument =
                 "matroskademux ! matroskamux! filesink location=" + outputFilePath.toAbsolutePath().toString();
 
+        //Might need to update DEFAULT_PATH_TO_GSTREAMER variable in KinesisVideoGStreamerPiperExample class
         KinesisVideoGStreamerPiperExample example = KinesisVideoGStreamerPiperExample.builder().region(Regions.US_WEST_2)
                 .streamName("myTestStream2")
                 .credentialsProvider(new ProfileCredentialsProvider())

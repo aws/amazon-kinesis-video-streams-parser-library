@@ -116,42 +116,10 @@ appropriate inputs.
 #### KinesisVideoRekognitionLambdaExample
 `KinesisVideoRekognitionLambdaExample` decodes H264 frames, overlaps bounding boxes, encodes to H264 frames again and ingests them into a new Kinesis Video streams using Kinesis Video Producer SDK.
 To run the sample follow the below steps:
-* Goto IAM role, and Create a role for AWS service and select 'Lambda' in 'Choose the service that will use this role'. Click Next
-* Click Create Policy' and goto the JSON tab and paste the below. Click 'Review Policy' and specify a policy name to create policy.
-```
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Sid": "Editor",
-            "Effect": "Allow",
-            "Action": [
-                "dynamodb:*",
-                "logs:CreateLogGroup",
-                "logs:CreateLogStream",
-                "logs:PutLogEvents",
-                "kinesis:Get*",
-                "kinesis:List*",
-                "kinesis:Describe*",
-                "kinesisvideo:*"
-            ],
-            "Resource": "*"
-        }
-    ]
-}
- ```
-* Refresh the IAM role page and add the policy created above. Leave rest of the options with default values and enter the role name in last page to create IAM role.
-* Create a Lambda from scratch called 'KinesisVideoRekognitionSample' with Java 8 as runtime. For IAM role, choose the role created above.
-* Add 'Kinesis' as the trigger for the lambda and select Kinesis Data Streams name in which Rekognition output is emitted.
-* Select batch size as 100 and starting position as 'Latest'. 'Add' and 'Save' the changes with "Enable trigger" option checked.
 * Run `mvn package` from 'amazon-kinesis-video-streams-parser-library' folder. Upload './target/amazon-kinesis-video-streams-parser-library-$VERSION-shaded.jar' file to a S3 bucket.
-* Click on the lambda name and specify 'Code entry type' as 'Upload file from S3' and specify the above S3 object URL.
-* Change the 'Handler' to `com.amazonaws.kinesisvideo.parser.examples.lambda.KinesisVideoRekognitionLambdaExample::handleRequest`.
-* Add below Environment variables. Specify the input KinesisVideo stream name in -DKVSStreamName parameter.
-   * key : DISPLAY value : localhost:0.0
-   * key : JAVA_TOOL_OPTIONS value : -Djava.awt.headless=true -DKVSStreamName="<stream-name>" -Dlog4j.debug
-* Choose the execution role as the IAM role created above. Set 'Memory (MB)' to max value and 'Timeout' as 5 minutes.
-* Set Concurrency to '1' as lambda should process fragments in order. Click 'Save'.
+* Note the S3 bucket and key name.
+* Find the file `LambdaExampleCFnTemplate.yml` in the github package.
+* Goto AWS CloudFormation console and create stack using above template, follow the description to the input parameters.
 * Now start the producer to ingest data into Kinesis Video Streams for which the Rekognition stream processor is configured.
 * Lambda will be triggered as soon as the Rekognition stream processor starts emitting records in Kinesis Data Streams. Lambda will also create a new Kinesis Video streams
  with the input stream name + 'Rekognized' suffix and ingest frames overlapped with bounding boxes which should be viewable in Kinesis Video Streams console.
@@ -160,6 +128,10 @@ To run the sample follow the below steps:
  the new Kinesis Video stream might be delayed significantly.
 
 ## Release Notes
+### Release 1.0.12 (Mar 2019)
+* Bugfix: Fix KinesisVideoExampleTest example issue that was using non-exist test file.
+* Improve KinesisVideoRekognitionLambdaExample to use AWS CloudFormation Template to create resources.
+
 ### Release 1.0.11 (Mar 2019)
 * Bugfix: KinesisVideoRekognitionIntegrationExample broken because the frame process callback is not invoked.
 
