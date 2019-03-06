@@ -36,7 +36,7 @@ public class KinesisVideoExampleTest {
         KinesisVideoExample example = KinesisVideoExample.builder().region(Regions.US_WEST_2)
                 .streamName("myTestStream")
                 .credentialsProvider(new ProfileCredentialsProvider())
-                .inputVideoStream(TestResourceUtil.getTestInputStream("vogels.mkv"))
+                .inputVideoStream(TestResourceUtil.getTestInputStream("vogels_480.mkv"))
                 .build();
 
         example.execute();

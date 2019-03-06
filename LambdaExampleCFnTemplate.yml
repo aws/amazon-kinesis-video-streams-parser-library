@@ -1,0 +1,75 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: This is the CloudFormation Template that creates reources for KinesisVideoRekognitionLambdaExample. 
+Parameters:
+  LambdaFunctionBucket:
+    Type: String
+    Description: S3 bucket that holds the Lambda Function which parses inference output. E.g., "yourS3BucketName"
+  LambdaFunctionKey:
+    Type: String
+    Description: S3 key of the Lambda Function which parses inference output. E.g., "yours3path/amazon-kinesis-video-streams-parser-library-1.0.10-shaded.jar"
+  KVSStreamName:
+    Type: String
+    Description: Input KVS Stream Name created in https://docs.aws.amazon.com/rekognition/latest/dg/recognize-faces-in-a-video-stream.html
+  KDSStreamArn:
+    Type: String
+    Description: KDS StreamArn, created in https://docs.aws.amazon.com/rekognition/latest/dg/recognize-faces-in-a-video-stream.html
+Resources:
+  LambdaRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 
+                - "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "LambdaPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Sid: "ParserLibRekognitionLambdaExamplePolicy"
+                Effect: "Allow"
+                Action:
+                  - "dynamodb:*"
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                  - "kinesis:Get*"
+                  - "kinesis:List*"
+                  - "kinesis:Describe*"
+                  - "kinesisvideo:*"
+                  - "s3:*"
+                Resource:
+                  - "*"
+  LambdaFunctionProcessingRekognitionResult:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Handler: "com.amazonaws.kinesisvideo.parser.examples.lambda.KinesisVideoRekognitionLambdaExample::handleRequest"
+      Role: !GetAtt LambdaRole.Arn
+      Code: 
+        S3Bucket: {"Fn::Sub": "${LambdaFunctionBucket}"}
+        S3Key: {"Fn::Sub": "${LambdaFunctionKey}"}
+      Runtime: "java8"
+      Environment:
+        Variables:
+          DISPLAY: localhost:0.0
+          JAVA_TOOL_OPTIONS: {"Fn::Sub": "-Djava.awt.headless=true -DKVSStreamName=${KVSStreamName} -Dlog4j.debug"}
+      Timeout: "300"
+      MemorySize: "3008"
+      ReservedConcurrentExecutions: 1
+  LambdaTrigger:
+    Type: "AWS::Lambda::EventSourceMapping"
+    Properties:
+      BatchSize: 100
+      Enabled: True
+      EventSourceArn: {"Fn::Sub": "${KDSStreamArn}"}
+      FunctionName: !Ref LambdaFunctionProcessingRekognitionResult
+      StartingPosition: "LATEST"
