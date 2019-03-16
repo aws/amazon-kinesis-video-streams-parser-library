@@ -22,17 +22,17 @@ import java.nio.ByteBuffer;
 
 /**
  * An implementation of ParserByteSource that wraps an input stream containing the EBML stream.
- * TODO: Fix exception handling in this code.
  */
 public class InputStreamParserByteSource implements ParserByteSource {
     private static final int BUFFER_SIZE = 8192;
+    private static final int MARK_SIZE = 100;
     private final BufferedInputStream bufferedInputStream;
 
-    public InputStreamParserByteSource(InputStream inputStream) {
+    public InputStreamParserByteSource(final InputStream inputStream) {
         this(inputStream, BUFFER_SIZE);
     }
 
-    InputStreamParserByteSource(InputStream inputStream, int bufferSize) {
+    InputStreamParserByteSource(final InputStream inputStream, final int bufferSize) {
         bufferedInputStream = new BufferedInputStream(inputStream, bufferSize);
         Validate.isTrue(bufferedInputStream.markSupported());
     }
@@ -42,8 +42,8 @@ public class InputStreamParserByteSource implements ParserByteSource {
     public int readByte() {
         try {
             return bufferedInputStream.read();
-        } catch (IOException e) {
-            throw new RuntimeException("Add new ParserException type");
+        } catch (final IOException e) {
+            throw new RuntimeException("Exception while reading byte from input stream!", e);
         }
     }
 
@@ -51,38 +51,37 @@ public class InputStreamParserByteSource implements ParserByteSource {
     public int available() {
         try {
             return bufferedInputStream.available();
-        } catch (IOException e) {
-            throw new RuntimeException("Add new ParserException type");
+        } catch (final IOException e) {
+            throw new RuntimeException("Exception while getting available bytes from input stream!", e);
         }
     }
 
     @Override
-    public int readBytes(ByteBuffer dest, int numBytes) {
+    public int readBytes(final ByteBuffer dest, final int numBytes) {
         try {
             Validate.isTrue(dest.remaining() >= numBytes);
-            int numBytesRead = bufferedInputStream.read(dest.array(), dest.position(), numBytes);
+            final int numBytesRead = bufferedInputStream.read(dest.array(), dest.position(), numBytes);
             if (numBytesRead > 0) {
                 dest.position(dest.position() + numBytesRead);
             }
 
             return numBytesRead;
-        } catch (IOException e) {
-            throw new RuntimeException("Add new ParserException type");
+        } catch (final IOException e) {
+            throw new RuntimeException("Exception while reading bytes from input stream!", e);
         }
     }
 
     @Override
     public boolean eof() {
         try {
-            bufferedInputStream.mark(100);
-            int readByte = bufferedInputStream.read();
-            if (readByte == -1) {
+            bufferedInputStream.mark(MARK_SIZE);
+            if (readByte() == -1) {
                 return true;
             }
             bufferedInputStream.reset();
             return false;
-        } catch (IOException e) {
-            throw new RuntimeException("Add new ParserException type");
+        } catch (final IOException e) {
+            throw new RuntimeException("Exception while resetting input stream!", e);
         }
     }
 }
