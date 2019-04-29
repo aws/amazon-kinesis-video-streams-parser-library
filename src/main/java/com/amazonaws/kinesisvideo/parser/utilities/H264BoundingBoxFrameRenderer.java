@@ -19,6 +19,7 @@ import java.util.Optional;
 
 import com.amazonaws.kinesisvideo.parser.examples.KinesisVideoBoundingBoxFrameViewer;
 import com.amazonaws.kinesisvideo.parser.mkv.Frame;
+import com.amazonaws.kinesisvideo.parser.mkv.FrameProcessException;
 import com.amazonaws.kinesisvideo.parser.rekognition.pojo.RekognizedFragmentsIndex;
 import com.amazonaws.kinesisvideo.parser.rekognition.pojo.RekognizedOutput;
 import lombok.Setter;
@@ -55,7 +56,7 @@ public class H264BoundingBoxFrameRenderer extends H264FrameRenderer {
 
     @Override
     public void process(final Frame frame, final MkvTrackMetadata trackMetadata, final Optional<FragmentMetadata> fragmentMetadata,
-                        final Optional<FragmentMetadataVisitor.MkvTagProcessor> tagProcessor) {
+                        final Optional<FragmentMetadataVisitor.MkvTagProcessor> tagProcessor) throws FrameProcessException {
         final BufferedImage bufferedImage = decodeH264Frame(frame, trackMetadata);
         final Optional<RekognizedOutput> rekognizedOutput = getRekognizedOutput(frame, fragmentMetadata);
         renderFrame(bufferedImage, rekognizedOutput);
