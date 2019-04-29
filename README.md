@@ -128,6 +128,9 @@ To run the sample follow the below steps:
  the new Kinesis Video stream might be delayed significantly.
 
 ## Release Notes
+### Release 1.0.13 (Apr 2019)
+* Fix: Make process method in H264FrameProcessor and H264FrameDecoder throw FrameProcessException.
+
 ### Release 1.0.12 (Mar 2019)
 * Bugfix: Fix KinesisVideoExampleTest example issue that was using non-exist test file.
 * Improve KinesisVideoRekognitionLambdaExample to use AWS CloudFormation Template to create resources.

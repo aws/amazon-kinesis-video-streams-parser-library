@@ -18,6 +18,7 @@ import java.util.Optional;
 
 import com.amazonaws.kinesisvideo.parser.examples.KinesisVideoFrameViewer;
 import com.amazonaws.kinesisvideo.parser.mkv.Frame;
+import com.amazonaws.kinesisvideo.parser.mkv.FrameProcessException;
 import lombok.extern.slf4j.Slf4j;
 
 import static com.amazonaws.kinesisvideo.parser.utilities.BufferedImageUtil.addTextToImage;
@@ -43,7 +44,7 @@ public class H264FrameRenderer extends H264FrameDecoder {
 
     @Override
     public void process(Frame frame, MkvTrackMetadata trackMetadata, Optional<FragmentMetadata> fragmentMetadata,
-                        Optional<FragmentMetadataVisitor.MkvTagProcessor> tagProcessor) {
+                        Optional<FragmentMetadataVisitor.MkvTagProcessor> tagProcessor) throws FrameProcessException {
         final BufferedImage bufferedImage = decodeH264Frame(frame, trackMetadata);
         if (tagProcessor.isPresent()) {
             final FragmentMetadataVisitor.BasicMkvTagProcessor processor =

@@ -20,6 +20,7 @@ import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.java.client.KinesisVideoJavaClientFactory;
 import com.amazonaws.kinesisvideo.parser.examples.BoundingBoxImagePanel;
 import com.amazonaws.kinesisvideo.parser.mkv.Frame;
+import com.amazonaws.kinesisvideo.parser.mkv.FrameProcessException;
 import com.amazonaws.kinesisvideo.parser.rekognition.pojo.RekognizedOutput;
 import com.amazonaws.kinesisvideo.parser.utilities.FragmentMetadata;
 import com.amazonaws.kinesisvideo.parser.utilities.FrameVisitor;
@@ -121,7 +122,7 @@ public class H264FrameProcessor implements FrameVisitor.FrameProcessor {
      */
     @Override
     public void process(final Frame frame, final MkvTrackMetadata trackMetadata,
-                        final Optional<FragmentMetadata> fragmentMetadata) {
+                        final Optional<FragmentMetadata> fragmentMetadata) throws FrameProcessException {
         if (rekognizedOutputs != null) {
 
             // Decode H264 frame
