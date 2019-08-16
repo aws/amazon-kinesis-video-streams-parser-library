@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and limitations 
 package com.amazonaws.kinesisvideo.parser.utilities;
 
 import com.amazonaws.kinesisvideo.parser.examples.lambda.EncodedFrame;
+import lombok.extern.slf4j.Slf4j;
 import org.jcodec.codecs.h264.H264Encoder;
 import org.jcodec.codecs.h264.H264Utils;
 import org.jcodec.codecs.h264.encode.H264FixedRateControl;
@@ -36,6 +37,7 @@ import static java.util.Arrays.asList;
 /**
  * H264 Frame Encoder class which uses JCodec encoder to encode frames.
  */
+@Slf4j
 public class H264FrameEncoder {
 
     private Picture toEncode;
@@ -86,6 +88,8 @@ public class H264FrameEncoder {
 
         // First frame is treated as I Frame (IDR Frame)
         final SliceType sliceType = this.frameNumber == 0 ? SliceType.I : SliceType.P;
+        log.debug("Encoding frame no: {}, frame type : {}", frameNumber, sliceType);
+
         final boolean idr = this.frameNumber == 0;
 
         // Encode image into H.264 frame, the result is stored in 'out' buffer

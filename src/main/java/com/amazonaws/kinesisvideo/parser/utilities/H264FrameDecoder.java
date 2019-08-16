@@ -48,7 +48,7 @@ public class H264FrameDecoder implements FrameVisitor.FrameProcessor  {
 
     @Override
     public void process(final Frame frame, final MkvTrackMetadata trackMetadata,
-                        final Optional<FragmentMetadata> fragmentMetadata) {
+                        final Optional<FragmentMetadata> fragmentMetadata) throws FrameProcessException {
         decodeH264Frame(frame, trackMetadata);
     }
 

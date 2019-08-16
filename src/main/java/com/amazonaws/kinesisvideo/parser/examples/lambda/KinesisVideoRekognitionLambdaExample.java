@@ -75,7 +75,8 @@ public final class KinesisVideoRekognitionLambdaExample implements RequestHandle
     public static void main(final String[] args) throws Exception {
         final KinesisVideoRekognitionLambdaExample KinesisVideoRekognitionLambdaExample =
                 new KinesisVideoRekognitionLambdaExample();
-        KinesisVideoRekognitionLambdaExample.initialize(System.getProperty("KVSStreamName"));
+        KinesisVideoRekognitionLambdaExample.initialize(
+                System.getProperty("KVSStreamName"), Regions.fromName(System.getenv("AWS_REGION")));
         KinesisVideoRekognitionLambdaExample.startKDSWorker(System.getProperty("KDSStreamName"));
         Thread.sleep(KCL_INIT_DELAY_MILLIS); // Initial delay to wait for KCL to initialize
         while (true) { // For local desktop testing.
@@ -86,12 +87,14 @@ public final class KinesisVideoRekognitionLambdaExample implements RequestHandle
     /**
      * Initialize method to set variables.
      */
-    private void initialize(final String kvsStreamName) {
+    private void initialize(final String kvsStreamName, final Regions regionName) {
         this.inputKvsStreamName = kvsStreamName;
         outputKvsStreamName = kvsStreamName + "-Rekognized";
-        kvsClient = new StreamOps(Regions.US_WEST_2, kvsStreamName, credentialsProvider);
-        h264FrameProcessor = H264FrameProcessor.create(credentialsProvider, outputKvsStreamName);
+        kvsClient = new StreamOps(regionName, kvsStreamName, credentialsProvider);
+        h264FrameProcessor = H264FrameProcessor.create(credentialsProvider, outputKvsStreamName, regionName);
         fragmentCheckpointManager = new DDBBasedFragmentCheckpointManager(kvsClient.getRegion(), credentialsProvider);
+        log.info("Initialized with input KVS stream: {}, output {}, region : {}",
+                inputKvsStreamName, outputKvsStreamName, regionName);
     }
 
     /**
@@ -133,11 +136,11 @@ public final class KinesisVideoRekognitionLambdaExample implements RequestHandle
                 h264FrameProcessor.setRekognizedOutputs(rekognizedOutputList);
                 worker.run();
                 // For every fragment, the rekognition output needs to be set and the encoder needs to be reset
-                // as the JCodec encoder always treats first frame as IDR fram
+                // as the JCodec encoder always treats first frame as IDR frame
                 h264FrameProcessor.resetEncoder();
-                log.info("Fragment {}  processed successfully ...", fragmentNumber);
+                log.info("Fragment {} processed successfully ...", fragmentNumber);
 
-                // Once the current fragment number is processed save it as a heckpoint.
+                // Once the current fragment number is processed save it as a checkpoint.
                 fragmentCheckpointManager.saveCheckPoint(inputKvsStreamName, fragmentNumber,
                         rekognizedFragment.getProducerTime(), rekognizedFragment.getServerTime());
 
@@ -166,11 +169,7 @@ public final class KinesisVideoRekognitionLambdaExample implements RequestHandle
     @Override
     public Context handleRequest(final KinesisEvent kinesisEvent, final Context context) {
         try {
-            log.info("Handling request !");
-            initialize(System.getProperty("KVSStreamName"));
-            log.info("Input KVS Stream name : {}", inputKvsStreamName);
-            log.info("Output KVS Stream name : {}", inputKvsStreamName);
-            log.info("Context : {}", context);
+            initialize(System.getProperty("KVSStreamName"), Regions.fromName(System.getenv("AWS_REGION")));
             loadProducerJNI(context);
 
             final List<Record> records = kinesisEvent.getRecords()
@@ -225,7 +224,7 @@ public final class KinesisVideoRekognitionLambdaExample implements RequestHandle
                 log.warn("Couldn't processRekognizedOutputs record {}. Skipping the record.", record);
             }
         }
-        log.info("Processing all {} KDS records.", records.size());
+        log.info("Processed all {} KDS records.", records.size());
     }
 
     /**

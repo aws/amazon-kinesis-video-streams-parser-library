@@ -124,7 +124,7 @@ public final class ProducerStreamUtil {
                 MAX_LATENCY_ZERO,
                 DEFAULT_GOP_DURATION * HUNDREDS_OF_NANOS_IN_A_MILLISECOND,
                 KEYFRAME_FRAGMENTATION,
-                SDK_GENERATES_TIMECODES,
+                USE_FRAME_TIMECODES,
                 configuration.getIsAbsoluteTimecode(),
                 REQUEST_FRAGMENT_ACKS,
                 RECOVER_ON_FAILURE,

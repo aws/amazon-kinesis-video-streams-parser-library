@@ -13,11 +13,13 @@ See the License for the specific language governing permissions and limitations 
 */
 package com.amazonaws.kinesisvideo.parser.rekognition.processor;
 
+import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.kinesisvideo.parser.rekognition.pojo.RekognitionInput;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.rekognition.model.CreateStreamProcessorResult;
 import com.amazonaws.services.rekognition.model.DescribeStreamProcessorResult;
+import com.amazonaws.services.rekognition.model.ListStreamProcessorsResult;
 import com.amazonaws.services.rekognition.model.StartStreamProcessorResult;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Assert;
@@ -62,6 +64,12 @@ public class RekognitionStreamProcessorTest {
     public void describeStreamProcessor() {
         final DescribeStreamProcessorResult result = streamProcessor.describeStreamProcessor();
         log.info("Status for stream processor : {}", result.getStatus());
+    }
+
+    @Test
+    public void listStreamProcessor() {
+        final ListStreamProcessorsResult result = streamProcessor.listStreamProcessor();
+        log.info("List StreamProcessors : {}", result);
     }
 
 }

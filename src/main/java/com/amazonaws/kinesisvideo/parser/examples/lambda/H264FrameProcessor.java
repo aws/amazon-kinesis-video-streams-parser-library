@@ -20,6 +20,7 @@ import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.java.client.KinesisVideoJavaClientFactory;
 import com.amazonaws.kinesisvideo.parser.examples.BoundingBoxImagePanel;
 import com.amazonaws.kinesisvideo.parser.mkv.Frame;
+import com.amazonaws.kinesisvideo.parser.mkv.FrameProcessException;
 import com.amazonaws.kinesisvideo.parser.rekognition.pojo.RekognizedOutput;
 import com.amazonaws.kinesisvideo.parser.utilities.FragmentMetadata;
 import com.amazonaws.kinesisvideo.parser.utilities.FrameVisitor;
@@ -28,6 +29,7 @@ import com.amazonaws.kinesisvideo.parser.utilities.H264FrameEncoder;
 import com.amazonaws.kinesisvideo.parser.utilities.MkvTrackMetadata;
 import com.amazonaws.kinesisvideo.parser.utilities.ProducerStreamUtil;
 import com.amazonaws.kinesisvideo.producer.StreamInfo;
+import com.amazonaws.regions.Regions;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -36,6 +38,8 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Optional;
 
+import static com.google.common.base.Preconditions.checkState;
+
 @Slf4j
 public class H264FrameProcessor implements FrameVisitor.FrameProcessor {
 
@@ -43,6 +47,7 @@ public class H264FrameProcessor implements FrameVisitor.FrameProcessor {
     private static final int OFFSET_DELTA_THRESHOLD = 10;
 
     private final BoundingBoxImagePanel boundingBoxImagePanel;
+    private final Regions regionName;
     private RekognizedOutput currentRekognizedOutput = null;
     private H264FrameEncoder h264Encoder;
     private H264FrameDecoder h264Decoder;
@@ -61,17 +66,21 @@ public class H264FrameProcessor implements FrameVisitor.FrameProcessor {
     private long keyFrameTimecode;
 
     private H264FrameProcessor(final AWSCredentialsProvider credentialsProvider,
-                               final String outputKvsStreamName) {
+                               final String outputKvsStreamName,
+                               final Regions regionName) {
         this.boundingBoxImagePanel = new BoundingBoxImagePanel();
         this.credentialsProvider = credentialsProvider;
         this.outputKvsStreamName = outputKvsStreamName;
+        this.regionName = regionName;
         this.h264Decoder = new H264FrameDecoder();
     }
 
     private void initializeKinesisVideoProducer(final byte[] cpd) {
         try {
+            log.info("Initializing KVS Producer with stream name {} and region : {}",
+                    outputKvsStreamName, regionName);
             final KinesisVideoClient kinesisVideoClient = KinesisVideoJavaClientFactory
-                    .createKinesisVideoClient(credentialsProvider);
+                    .createKinesisVideoClient(regionName, credentialsProvider);
             final CameraMediaSourceConfiguration configuration =
                     new CameraMediaSourceConfiguration.Builder()
                             .withFrameRate(30)
@@ -85,7 +94,7 @@ public class H264FrameProcessor implements FrameVisitor.FrameProcessor {
                             .withHorizontalResolution(640)
                             .withVerticalResolution(480)
                             .withCodecPrivateData(cpd)
-                            .withIsAbsoluteTimecode(false)
+                            .withIsAbsoluteTimecode(true)
                             .build();
             this.KVSMediaSource = new KVSMediaSource(
                     ProducerStreamUtil.toStreamInfo(outputKvsStreamName, configuration));
@@ -110,8 +119,9 @@ public class H264FrameProcessor implements FrameVisitor.FrameProcessor {
     }
 
     public static H264FrameProcessor create(final AWSCredentialsProvider credentialsProvider,
-                                            final String rekognizedStreamName) {
-        return new H264FrameProcessor(credentialsProvider, rekognizedStreamName);
+                                            final String rekognizedStreamName,
+                                            final Regions regionName) {
+        return new H264FrameProcessor(credentialsProvider, rekognizedStreamName, regionName);
     }
 
     /**
@@ -121,11 +131,15 @@ public class H264FrameProcessor implements FrameVisitor.FrameProcessor {
      */
     @Override
     public void process(final Frame frame, final MkvTrackMetadata trackMetadata,
-                        final Optional<FragmentMetadata> fragmentMetadata) {
+                        final Optional<FragmentMetadata> fragmentMetadata) throws FrameProcessException {
         if (rekognizedOutputs != null) {
+
+            checkState(fragmentMetadata.isPresent(), "FragmentMetadata should be present !");
 
             // Decode H264 frame
             final BufferedImage decodedFrame = h264Decoder.decodeH264Frame(frame, trackMetadata);
+            log.debug("Decoded frame : {} with timecode : {} and fragment metadata : {}",
+                    frameNo, frame.getTimeCode(), fragmentMetadata.get());
 
             // Get Rekognition results for this fragment number
             final Optional<RekognizedOutput> rekognizedOutput = findRekognizedOutputForFrame(frame, fragmentMetadata);
@@ -134,12 +148,13 @@ public class H264FrameProcessor implements FrameVisitor.FrameProcessor {
             final BufferedImage compositeFrame = renderFrame(decodedFrame, rekognizedOutput);
 
             // Encode to H264 frame
-            log.info("Encoding frame {} for fragment number {}", frameNo, fragmentMetadata.get().getFragmentNumber());
             final EncodedFrame encodedH264Frame = encodeH264Frame(compositeFrame);
-            encodedH264Frame.setTimeCode(frame.getTimeCode());
+            encodedH264Frame.setTimeCode(fragmentMetadata.get().getProducerSideTimestampMillis() + frame.getTimeCode());
+            log.debug("Encoded frame : {} with timecode : {}", frameNo, encodedH264Frame.getTimeCode());
 
             // Call PutFrame for processed encodedFrame.
             putFrame(encodedH264Frame);
+            frameNo++;
 
         } else {
             log.warn("Rekognition output is empty");
@@ -153,7 +168,7 @@ public class H264FrameProcessor implements FrameVisitor.FrameProcessor {
             isKVSProducerInitialized = true;
         }
         KVSMediaSource.putFrameData(encodedH264Frame);
-        log.info("PutFrame successful.");
+        log.debug("PutFrame successful for frame no : {}", frameNo);
     }
 
     private EncodedFrame encodeH264Frame(final BufferedImage bufferedImage) {
@@ -231,16 +246,16 @@ public class H264FrameProcessor implements FrameVisitor.FrameProcessor {
     @SuppressWarnings("Duplicates")
     private BufferedImage renderFrame(final BufferedImage bufferedImage, final Optional<RekognizedOutput> rekognizedOutput) {
         if (rekognizedOutput.isPresent()) {
-            log.info("Rendering Rekognized sampled frame...");
+            log.debug("Rendering Rekognized sampled frame...");
             boundingBoxImagePanel.processRekognitionOutput(bufferedImage.createGraphics(), bufferedImage.getWidth(),
                     bufferedImage.getHeight(), rekognizedOutput.get());
             currentRekognizedOutput = rekognizedOutput.get();
         } else if (currentRekognizedOutput != null) {
-            log.info("Rendering non-sampled frame with previous rekognized results...");
+            log.debug("Rendering non-sampled frame with previous rekognized results...");
             boundingBoxImagePanel.processRekognitionOutput(bufferedImage.createGraphics(), bufferedImage.getWidth(),
                     bufferedImage.getHeight(), currentRekognizedOutput);
         } else {
-            log.info("Rendering frame without any rekognized results...");
+            log.debug("Rendering frame without any rekognized results...");
         }
         return bufferedImage;
     }
