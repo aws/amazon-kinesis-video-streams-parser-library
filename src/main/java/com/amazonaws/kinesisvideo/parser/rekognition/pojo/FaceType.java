@@ -39,9 +39,9 @@ public enum FaceType {
 
     public static FaceType fromString(String value) {
         for (int i = 0; i < FaceType.values().length; i++) {
-            if(FaceType.values()[i].getPrefix().equals(value))
+            if(FaceType.values()[i].getPrefix().toUpperCase().equals(value.toUpperCase()))
                 return FaceType.values()[i];
         }
-        throw new UnsupportedOperationException("Not valid face type !");
+        return FaceType.UNKNOWN;
     }
 }

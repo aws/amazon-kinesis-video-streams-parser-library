@@ -22,10 +22,12 @@ import com.amazonaws.kinesisvideo.parser.rekognition.pojo.BoundingBox;
 import com.amazonaws.kinesisvideo.parser.rekognition.pojo.FaceType;
 import com.amazonaws.kinesisvideo.parser.rekognition.pojo.MatchedFace;
 import com.amazonaws.kinesisvideo.parser.rekognition.pojo.RekognizedOutput;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Panel which is used for rendering frames and embedding bounding boxes on the frames.
  */
+@Slf4j
 public class BoundingBoxImagePanel extends ImagePanel {
     private static final String DELIMITER = "-";
 
@@ -40,6 +42,7 @@ public class BoundingBoxImagePanel extends ImagePanel {
 
             // Draw bounding boxes for faces.
             if (rekognizedOutput.getFaceSearchOutputs() != null) {
+                log.debug("Number of detected faces in a frame {}", rekognizedOutput.getFaceSearchOutputs().size());
                 for (final RekognizedOutput.FaceSearchOutput faceSearchOutput : rekognizedOutput.getFaceSearchOutputs()) {
                     final FaceType detectedFaceType;
                     final String title;
@@ -60,12 +63,13 @@ public class BoundingBoxImagePanel extends ImagePanel {
                             final String[] imageIds = externalImageId.split(DELIMITER);
                             if (imageIds.length > 1) {
                                 title = imageIds[0];
-                                detectedFaceType = FaceType.valueOf(imageIds[1].toUpperCase());
+                                detectedFaceType = FaceType.fromString(imageIds[1]);
                             } else {
                                 title = "No prefix";
                                 detectedFaceType = FaceType.NOT_RECOGNIZED;
                             }
                         }
+                        log.debug("Number of matched faces for the detected face {}", faceSearchOutput.getMatchedFaceList().size());
                     } else {
                         detectedFaceType = FaceType.NOT_RECOGNIZED;
                         title = "Not recognized";
