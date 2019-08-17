@@ -128,6 +128,13 @@ To run the sample follow the below steps:
  the new Kinesis Video stream might be delayed significantly.
 
 ## Release Notes
+### Release 1.0.14 (Aug 2019)
+* Fixed frame timecode during re-encoding in KinesisVideoRekognitionLambdaExample
+* Fixed region for derived KVS Stream
+* Using default FaceType for external image ids that doesn't follow specified format
+* Upgraded JCodec version to 0.2.3 which provides scaling list support
+* Log improvements
+
 ### Release 1.0.13 (Apr 2019)
 * Fix: Make process method in H264FrameProcessor and H264FrameDecoder throw FrameProcessException.
 
