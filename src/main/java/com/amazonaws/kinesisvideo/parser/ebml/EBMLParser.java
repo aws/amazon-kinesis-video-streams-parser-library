@@ -85,7 +85,7 @@ public class EBMLParser {
         this.masterElements = new Stack<>();
         this.maxContentBytesInOnePass = maxContentBytesInOnePass;
         this.skipBuffer = ByteBuffer.allocate(maxContentBytesInOnePass);
-        log.info("Creating EBMLParser with maxContentBytesInOnePass {}", this.maxContentBytesInOnePass);
+        log.debug("Creating EBMLParser with maxContentBytesInOnePass {}", this.maxContentBytesInOnePass);
     }
 
     public void parse(ParserByteSource byteSource) {
@@ -155,16 +155,16 @@ public class EBMLParser {
 
     public void closeParser() {
         if (!closed) {
-            log.info("Closing EBMLParser");
+            log.debug("Closing EBMLParser");
             //close current element
             if (currentElement != null && currentElement.isKnownType()) {
-                log.info("Closing with currentElement {} still set, invoking end element callback on it",
+                log.debug("Closing with currentElement {} still set, invoking end element callback on it",
                         currentElement);
                 invokeOnEndElementCallback(currentElement);
                 currentElement = null;
             }
 
-            log.info("Closing with {} master elements on stack, invoking end element callback on them",
+            log.debug("Closing with {} master elements on stack, invoking end element callback on them",
                     masterElements.size());
             while (!masterElements.isEmpty()) {
                 EBMLParserInternalElement top = masterElements.pop();
