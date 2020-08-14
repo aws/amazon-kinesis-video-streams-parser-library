@@ -24,7 +24,6 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalLong;
 
 /**
  * Class that captures the meta-data for a particular track in the mkv response.
@@ -46,10 +45,19 @@ public class MkvTrackMetadata {
     private String codecName = "";
     private ByteBuffer codecPrivateData;
 
+    // Video track specific
     @Builder.Default
     private Optional<BigInteger> pixelWidth = Optional.empty();
     @Builder.Default
     private Optional<BigInteger> pixelHeight = Optional.empty();
+
+    // Audio track specific
+    @Builder.Default
+    private Optional<Double> samplingFrequency = Optional.empty();
+    @Builder.Default
+    private Optional<BigInteger> channels = Optional.empty();
+    @Builder.Default
+    private Optional<BigInteger> bitDepth = Optional.empty();
 
     private List<MkvElement> allElementsInTrack;
 }

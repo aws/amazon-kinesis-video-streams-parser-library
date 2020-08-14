@@ -13,8 +13,6 @@ See the License for the specific language governing permissions and limitations 
 */
 package com.amazonaws.kinesisvideo.parser.utilities;
 
-import java.util.Optional;
-
 import com.amazonaws.kinesisvideo.parser.ebml.MkvTypeInfos;
 import com.amazonaws.kinesisvideo.parser.mkv.Frame;
 import com.amazonaws.kinesisvideo.parser.mkv.FrameProcessException;
@@ -25,6 +23,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.Validate;
 
+import java.math.BigInteger;
+import java.util.Optional;
+
 @Slf4j
 public class FrameVisitor extends CompositeMkvElementVisitor {
     private final FragmentMetadataVisitor fragmentMetadataVisitor;
@@ -32,6 +33,8 @@ public class FrameVisitor extends CompositeMkvElementVisitor {
     private final FrameProcessor frameProcessor;
     private final Optional<Long> trackNumber;
     private final Optional<FragmentMetadataVisitor.MkvTagProcessor> tagProcessor;
+    private Optional<BigInteger> timescale;
+    private Optional<BigInteger> fragmentTimecode;
 
     private FrameVisitor(final FragmentMetadataVisitor fragmentMetadataVisitor,
                          final Optional<FragmentMetadataVisitor.MkvTagProcessor> tagProcessor,
@@ -43,6 +46,8 @@ public class FrameVisitor extends CompositeMkvElementVisitor {
         this.frameProcessor = frameProcessor;
         this.tagProcessor = tagProcessor;
         this.trackNumber = trackNumber;
+        this.timescale = Optional.empty();
+        this.fragmentTimecode = Optional.empty();
     }
 
     public static FrameVisitor create(final FrameProcessor frameProcessor) {
@@ -83,6 +88,14 @@ public class FrameVisitor extends CompositeMkvElementVisitor {
             }
         }
 
+        default void process(final Frame frame, final MkvTrackMetadata trackMetadata,
+                final Optional<FragmentMetadata> fragmentMetadata,
+                final Optional<FragmentMetadataVisitor.MkvTagProcessor> tagProcessor,
+                final Optional<BigInteger> timescale, final Optional<BigInteger> fragmentTimecode)
+                throws FrameProcessException {
+            process(frame, trackMetadata, fragmentMetadata, tagProcessor);
+        }
+
         @Override
         default void close() {
             //No op close. Derived classes should implement this method to meaningfully handle cleanup of the
@@ -108,6 +121,15 @@ public class FrameVisitor extends CompositeMkvElementVisitor {
         @Override
         public void visit(final com.amazonaws.kinesisvideo.parser.mkv.MkvDataElement dataElement)
                 throws com.amazonaws.kinesisvideo.parser.mkv.MkvElementVisitException {
+
+            if (MkvTypeInfos.TIMECODESCALE.equals(dataElement.getElementMetaData().getTypeInfo())) {
+                timescale = Optional.of((BigInteger) dataElement.getValueCopy().getVal());
+            }
+
+            if (MkvTypeInfos.TIMECODE.equals(dataElement.getElementMetaData().getTypeInfo())) {
+                fragmentTimecode = Optional.of((BigInteger) dataElement.getValueCopy().getVal());
+            }
+
             if (MkvTypeInfos.SIMPLEBLOCK.equals(dataElement.getElementMetaData().getTypeInfo())) {
                 final MkvValue<Frame> frame = dataElement.getValueCopy();
                 Validate.notNull(frame);
@@ -118,7 +140,7 @@ public class FrameVisitor extends CompositeMkvElementVisitor {
                 if (trackNumber.orElse(frameTrackNo) == frameTrackNo) {
                     frameProcessor.process(frame.getVal(), trackMetadata,
                             fragmentMetadataVisitor.getCurrentFragmentMetadata(),
-                            tagProcessor);
+                            tagProcessor, timescale, fragmentTimecode);
                 }
             }
         }
