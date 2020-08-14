@@ -278,9 +278,12 @@ public class FragmentMetadataVisitor extends CompositeMkvElementVisitor {
                 .trackName(getStringVal(metaDataProperties, MkvTypeInfos.NAME))
                 .codecId(getStringVal(metaDataProperties, MkvTypeInfos.CODECID))
                 .codecName(getStringVal(metaDataProperties, MkvTypeInfos.CODECNAME))
+                .codecPrivateData(getByteBuffer(metaDataProperties, MkvTypeInfos.CODECPRIVATE))
                 .pixelWidth(getUnsignedLongValOptional(metaDataProperties, MkvTypeInfos.PIXELWIDTH))
                 .pixelHeight(getUnsignedLongValOptional(metaDataProperties, MkvTypeInfos.PIXELHEIGHT))
-                .codecPrivateData(getByteBuffer(metaDataProperties, MkvTypeInfos.CODECPRIVATE))
+                .samplingFrequency(getFloatingPointValOptional(metaDataProperties, MkvTypeInfos.SAMPLINGFREQUENCY))
+                .channels(getUnsignedLongValOptional(metaDataProperties, MkvTypeInfos.CHANNELS))
+                .bitDepth(getUnsignedLongValOptional(metaDataProperties, MkvTypeInfos.BITDEPTH))
                 .allElementsInTrack(trackEntryPropertyLists)
                 .build();
 
@@ -293,7 +296,6 @@ public class FragmentMetadataVisitor extends CompositeMkvElementVisitor {
             return null;
         }
         MkvDataElement dataElement = (MkvDataElement)element;
-        Validate.notNull(dataElement);
         Validate.isTrue(EBMLTypeInfo.TYPE.STRING.equals(dataElement.getElementMetaData().getTypeInfo().getType())
                 || EBMLTypeInfo.TYPE.UTF_8.equals(dataElement.getElementMetaData().getTypeInfo().getType()));
         return ((MkvValue<String>)dataElement.getValueCopy()).getVal();
@@ -310,9 +312,23 @@ public class FragmentMetadataVisitor extends CompositeMkvElementVisitor {
             return null;
         }
         MkvDataElement dataElement = (MkvDataElement) element;
-        Validate.notNull(dataElement);
         Validate.isTrue(EBMLTypeInfo.TYPE.UINTEGER.equals(dataElement.getElementMetaData().getTypeInfo().getType()));
         return ((MkvValue<BigInteger>) dataElement.getValueCopy()).getVal();
+    }
+
+    private static Optional<Double> getFloatingPointValOptional(Map<EBMLTypeInfo, MkvElement> metaDataProperties,
+            EBMLTypeInfo key) {
+        return Optional.ofNullable(getFloatingPointVal(metaDataProperties, key));
+    }
+
+    private static Double getFloatingPointVal(Map<EBMLTypeInfo, MkvElement> metaDataProperties, EBMLTypeInfo key) {
+        MkvElement element = metaDataProperties.get(key);
+        if (element == null) {
+            return null;
+        }
+        MkvDataElement dataElement = (MkvDataElement) element;
+        Validate.isTrue(EBMLTypeInfo.TYPE.FLOAT.equals(dataElement.getElementMetaData().getTypeInfo().getType()));
+        return ((MkvValue<Double>) dataElement.getValueCopy()).getVal();
     }
 
     private static ByteBuffer getByteBuffer(Map<EBMLTypeInfo, MkvElement> metaDataProperties, EBMLTypeInfo key) {
@@ -321,7 +337,6 @@ public class FragmentMetadataVisitor extends CompositeMkvElementVisitor {
             return null;
         }
         MkvDataElement dataElement = (MkvDataElement)element;
-        Validate.notNull(dataElement);
         Validate.isTrue(EBMLTypeInfo.TYPE.BINARY.equals(dataElement.getElementMetaData().getTypeInfo().getType()));
         return ((MkvValue<ByteBuffer>)dataElement.getValueCopy()).getVal();
     }

@@ -65,7 +65,7 @@ class MkvStreamReaderCallback implements EBMLParserCallbacks{
         } else {
             if (elementDataSize > readBuffer.capacity()) {
                 int sizeToAllocate = ((int )Math.ceil((double )elementDataSize/MAX_BUFFER_SIZE))*MAX_BUFFER_SIZE;
-                log.info("Resizing readBuffer to {}", sizeToAllocate);
+                log.debug("Resizing readBuffer to {}", sizeToAllocate);
                 readBuffer = ByteBuffer.allocate(sizeToAllocate);
             }
             readBuffer.clear();

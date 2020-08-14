@@ -128,6 +128,12 @@ To run the sample follow the below steps:
  the new Kinesis Video stream might be delayed significantly.
 
 ## Release Notes
+### Release 1.0.15 (Aug 2020)
+* Added new cluster packing option to the `OputputSegmentMerger` to enable creation of a playable MKV file from a sparse KVS stream.
+* Added parsing of audio specific fields from the MKV track header.
+* Bump some dependency versions.
+* Modify the log level on some log messages.
+
 ### Release 1.0.14 (Aug 2019)
 * Fixed frame timecode during re-encoding in KinesisVideoRekognitionLambdaExample
 * Fixed region for derived KVS Stream
