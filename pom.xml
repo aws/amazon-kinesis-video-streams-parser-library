@@ -6,6 +6,9 @@
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
+        <!-- aws-sdk-java uses jackson databind version 2.6.7 which has security vulnerabilities, updating to 2.12.3-->     
+        <jackson.version>2.12.3</jackson.version>
+        <jackson.databind.version>2.12.3</jackson.databind.version>             
     </properties>
     <groupId>com.amazonaws</groupId>
     <artifactId>amazon-kinesis-video-streams-parser-library</artifactId>
