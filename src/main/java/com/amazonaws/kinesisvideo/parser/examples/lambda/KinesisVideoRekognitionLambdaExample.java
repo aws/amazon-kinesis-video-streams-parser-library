@@ -36,6 +36,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
@@ -128,7 +129,7 @@ public final class KinesisVideoRekognitionLambdaExample implements RequestHandle
                 final FrameVisitor frameVisitor = FrameVisitor.create(h264FrameProcessor);
                 final GetMediaForFragmentListWorker worker = GetMediaForFragmentListWorker.create(
                         kvsClient.getStreamName(),
-                        fragmentNumber,
+                        Collections.singletonList(fragmentNumber),
                         kvsClient.getCredentialsProvider(),
                         kvsClient.getRegion(),
                         kvsClient.getAmazonKinesisVideo(),
