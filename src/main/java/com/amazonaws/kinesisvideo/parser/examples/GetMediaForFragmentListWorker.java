@@ -29,18 +29,19 @@ import com.amazonaws.services.kinesisvideo.model.GetDataEndpointRequest;
 import com.amazonaws.services.kinesisvideo.model.GetMediaForFragmentListRequest;
 import com.amazonaws.services.kinesisvideo.model.GetMediaForFragmentListResult;
 import lombok.extern.slf4j.Slf4j;
+import java.util.List;
 
 @Slf4j
 public class GetMediaForFragmentListWorker extends KinesisVideoCommon implements Runnable {
     private final AmazonKinesisVideoArchivedMedia amazonKinesisVideoArchivedMedia;
     private final MkvElementVisitor elementVisitor;
-    private final String fragmentNumber;
+    private final List<String> fragmentNumbers;
 
-    public GetMediaForFragmentListWorker(final String streamName, final String fragmentNumber,
+    public GetMediaForFragmentListWorker(final String streamName, final List<String> fragmentNumbers,
                                          final AWSCredentialsProvider awsCredentialsProvider, final String endPoint,
                                          final Regions region, final MkvElementVisitor elementVisitor) {
         super(region, awsCredentialsProvider, streamName);
-        this.fragmentNumber = fragmentNumber;
+        this.fragmentNumbers = fragmentNumbers;
         this.elementVisitor = elementVisitor;
         amazonKinesisVideoArchivedMedia = AmazonKinesisVideoArchivedMediaClient
                 .builder()
@@ -50,7 +51,7 @@ public class GetMediaForFragmentListWorker extends KinesisVideoCommon implements
     }
 
 
-    public static GetMediaForFragmentListWorker create(final String streamName, final String fragmentNumber,
+    public static GetMediaForFragmentListWorker create(final String streamName, final List<String> fragmentNumbers,
                                                        final AWSCredentialsProvider awsCredentialsProvider,
                                                        final Regions region,
                                                        final AmazonKinesisVideo amazonKinesisVideo,
@@ -59,7 +60,7 @@ public class GetMediaForFragmentListWorker extends KinesisVideoCommon implements
                 .withAPIName(APIName.GET_MEDIA_FOR_FRAGMENT_LIST).withStreamName(streamName);
         final String endpoint = amazonKinesisVideo.getDataEndpoint(request).getDataEndpoint();
         return new GetMediaForFragmentListWorker(
-                streamName, fragmentNumber, awsCredentialsProvider, endpoint, region, elementVisitor);
+                streamName, fragmentNumbers, awsCredentialsProvider, endpoint, region, elementVisitor);
     }
 
     @Override
@@ -68,7 +69,7 @@ public class GetMediaForFragmentListWorker extends KinesisVideoCommon implements
             log.info("Start GetMediaForFragmentList worker on stream {}", streamName);
             final GetMediaForFragmentListResult result = amazonKinesisVideoArchivedMedia.getMediaForFragmentList(
                     new GetMediaForFragmentListRequest()
-                            .withFragments(fragmentNumber)
+                            .withFragments(fragmentNumbers)
                             .withStreamName(streamName));
 
             log.info("GetMediaForFragmentList called on stream {} response {} requestId {}",
