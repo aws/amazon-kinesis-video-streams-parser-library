@@ -94,7 +94,6 @@ public class H264FrameProcessor implements FrameVisitor.FrameProcessor {
                             .withHorizontalResolution(640)
                             .withVerticalResolution(480)
                             .withCodecPrivateData(cpd)
-                            .withIsAbsoluteTimecode(true)
                             .build();
             this.KVSMediaSource = new KVSMediaSource(
                     ProducerStreamUtil.toStreamInfo(outputKvsStreamName, configuration));
