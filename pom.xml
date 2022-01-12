@@ -96,7 +96,7 @@
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-lambda-java-log4j</artifactId>
-            <version>1.0.0</version>
+            <version>1.5.1</version>
         </dependency>
 
         <!-- Encode/Decode dependencies -->
