@@ -131,6 +131,7 @@ To run the sample follow the below steps:
 
 ### Release 1.2.0 (Jan 2022)
 * Move from aws-lambda-java-log4j 1.1.0 to aws-lambda-java-log4j2 1.5.1 to address CVE
+* Update log4j to 2.17.1 to address CVE
 
 ### Release 1.1.0 (Dec 2021)
 * Add ListFragment worker and update GetMediaForFragmentListWorker
