@@ -129,6 +129,11 @@ To run the sample follow the below steps:
 
 ## Release Notes
 
+
+### Release 1.2.1 (Jan 2022)
+* Update slf4j-log4j12 and slf4j-api from 1.7.25 to 1.7.33
+* Update log4j-slf4j-impl from 2.8.2 to 2.17.1
+
 ### Release 1.2.0 (Jan 2022)
 * Move from aws-lambda-java-log4j 1.1.0 to aws-lambda-java-log4j2 1.5.1 to address CVE
 * Update log4j to 2.17.1 to address CVE
