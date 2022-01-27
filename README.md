@@ -129,6 +129,8 @@ To run the sample follow the below steps:
 
 ## Release Notes
 
+### Release 1.2.2 (Jan 2022)
+* Update slf4j-reload4j(slf4j-log4j12) and slf4j-api from 1.7.33 to 1.7.35
 
 ### Release 1.2.1 (Jan 2022)
 * Update slf4j-log4j12 and slf4j-api from 1.7.25 to 1.7.33
