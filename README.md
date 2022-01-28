@@ -131,6 +131,17 @@ To run the sample follow the below steps:
 
 ### Release 1.2.2 (Jan 2022)
 * Update slf4j-reload4j(slf4j-log4j12) and slf4j-api from 1.7.33 to 1.7.35
+* Update amazon-kinesis-client from 1.9.3 to 1.14.7
+* Update aws-lambda-java-core from 1.2.0 to 1.2.1
+* Update junit from 4.13.1 to 4.13.2
+* Update lombok from 1.18.16 to 1.18.22
+* Update commons-lang3 from 3.6 to 3.12.0
+* Update powermock-mockito-release-full from 1.6.3 to 1.6.4
+* Update maven-compiler-plugin from 3.2 to 3.9.0
+* Update lombok-maven-plugin from 1.18.16.0 to 1.18.20.0
+* Update maven-javadoc-plugin from 3.1.1 to 3.3.1
+* Update maven-source-plugin from 3.0.1 to 3.2.1
+* Update maven-shade-plugin from 2.3 to 3.2.4
 
 ### Release 1.2.1 (Jan 2022)
 * Update slf4j-log4j12 and slf4j-api from 1.7.25 to 1.7.33
