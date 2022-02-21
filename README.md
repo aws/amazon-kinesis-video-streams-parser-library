@@ -129,6 +129,12 @@ To run the sample follow the below steps:
 
 ## Release Notes
 
+### Release 1.2.3 (Feb 2022)
+* Update slf4j-reload4j and slf4j-api from 1.7.35 to 1.7.36
+* Update aws-lambda-java-events from 1.2.0 to 2.2.9
+* Update amazon-kinesis-video-streams-producer-sdk-java from 1.8.0 to 1.12.0
+* Update aws-java-sdk-bom from 1.11.487 to 1.12.162
+
 ### Release 1.2.2 (Jan 2022)
 * Update slf4j-reload4j(slf4j-log4j12) and slf4j-api from 1.7.33 to 1.7.35
 * Update amazon-kinesis-client from 1.9.3 to 1.14.7
