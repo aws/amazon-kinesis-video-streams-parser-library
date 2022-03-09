@@ -82,7 +82,7 @@ with the AWS SDK for the Kinesis Video. This example provides examples for
 * Create a stream, deleting and recreating if the stream of the same name already exists.
 * Call PutMedia to stream video fragments into the stream.
 * Simultaneously call GetMedia to stream video fragments out of the stream.
-* It uses the StreamingMkvParser to parse the returned the stream and apply the `OutputSegmentMerger`, `FragmentMetadataVisitor` visitors
+* It uses the StreamingMkvReader to parse the returned the stream and apply the `OutputSegmentMerger`, `FragmentMetadataVisitor` visitors
 along with a local one as part of the same `CompositeMkvElementVisitor` visitor.
 
 ### KinesisVideoRendererExample
