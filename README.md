@@ -129,6 +129,9 @@ To run the sample follow the below steps:
 
 ## Release Notes
 
+### Release 1.2.4 (Mar 2022)
+* Update amazon-kinesis-client from 1.14.7 to 1.14.8
+
 ### Release 1.2.3 (Feb 2022)
 * Update slf4j-reload4j and slf4j-api from 1.7.35 to 1.7.36
 * Update aws-lambda-java-events from 1.2.0 to 2.2.9
