@@ -78,7 +78,11 @@
             <artifactId>amazon-kinesis-video-streams-producer-sdk-java</artifactId>
             <version>1.12.0</version>
         </dependency>
-
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>amazon-kinesis-client</artifactId>
+            <version>1.14.8</version>
+        </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-lambda-java-core</artifactId>
