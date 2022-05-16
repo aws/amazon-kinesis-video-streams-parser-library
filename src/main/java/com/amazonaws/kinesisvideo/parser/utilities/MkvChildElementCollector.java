@@ -40,7 +40,7 @@ public class MkvChildElementCollector extends MkvElementVisitor {
     public MkvChildElementCollector(EBMLTypeInfo parentTypeInfo) {
         Validate.isTrue(parentTypeInfo.getType().equals(EBMLTypeInfo.TYPE.MASTER),
                 "ChildElementCollectors can only collect children for master elements");
-        log.info("MkvChildElementCollector for element {}", parentTypeInfo);
+        log.debug("MkvChildElementCollector for element {}", parentTypeInfo);
         this.parentTypeInfo = parentTypeInfo;
     }
 

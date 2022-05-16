@@ -102,14 +102,14 @@ public class StreamingMkvReader {
         if( !byteSource.eof() && !parser.isClosed()) {
             return true;
         } else if (byteSource.eof()) {
-            log.info("byteSource has reached eof");
+            log.debug("byteSource has reached eof");
             if(!parser.isClosed()) {
-                log.info("byteSource has reached eof and calling close on parser");
+                log.debug("byteSource has reached eof and calling close on parser");
                 parser.closeParser();
                 return true;
             }
         }
-        log.info("No more elements to process byteSource.eof {} parser.isClosed {} ",
+        log.debug("No more elements to process byteSource.eof {} parser.isClosed {} ",
                 byteSource.eof(),
                 parser.isClosed());
         return false;

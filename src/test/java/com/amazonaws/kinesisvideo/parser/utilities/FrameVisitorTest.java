@@ -15,10 +15,8 @@ package com.amazonaws.kinesisvideo.parser.utilities;
 
 import com.amazonaws.kinesisvideo.parser.TestResourceUtil;
 import com.amazonaws.kinesisvideo.parser.ebml.InputStreamParserByteSource;
-
 import com.amazonaws.kinesisvideo.parser.mkv.Frame;
 import com.amazonaws.kinesisvideo.parser.mkv.StreamingMkvReader;
-
 import lombok.Getter;
 import lombok.NonNull;
 import org.junit.Assert;
@@ -27,23 +25,32 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigInteger;
 import java.util.Optional;
 
 public class FrameVisitorTest {
     private static final int VIDEO_FRAMES_COUNT = 909;
     private static final int AUDIO_FRAMES_COUNT = 1425;
     private static final int SIMPLE_BLOCKS_COUNT_MKV = VIDEO_FRAMES_COUNT + AUDIO_FRAMES_COUNT;
+    private static final long TIMESCALE = 1000000;
+    private static final long LAST_FRAGMENT_TIMECODE = 28821;
 
     @Getter
     public static final class TestFrameProcessor implements FrameVisitor.FrameProcessor {
-
         private long framesCount = 0L;
+        private long timescale = 0L;
+        private long fragmentTimecode = 0L;
 
         @Override
-        public void process(@NonNull final Frame frame, final MkvTrackMetadata trackMetadata,
-                            final Optional<FragmentMetadata> fragmentMetadata) {
+        public void process(@NonNull final Frame frame, @NonNull final MkvTrackMetadata trackMetadata,
+                final @NonNull Optional<FragmentMetadata> fragmentMetadata,
+                final @NonNull Optional<FragmentMetadataVisitor.MkvTagProcessor> tagProcessor,
+                final @NonNull Optional<BigInteger> timescale, final @NonNull Optional<BigInteger> fragmentTimecode) {
+            this.timescale = timescale.get().longValue();
+            this.fragmentTimecode = fragmentTimecode.get().longValue();
             framesCount++;
         }
+
 
     }
     private FrameVisitor frameVisitor;
@@ -61,6 +68,8 @@ public class FrameVisitorTest {
         streamingMkvReader = StreamingMkvReader.createDefault(getClustersByteSource("vogels_480.mkv"));
         streamingMkvReader.apply(frameVisitor);
         Assert.assertEquals(SIMPLE_BLOCKS_COUNT_MKV, frameProcessor.getFramesCount());
+        Assert.assertEquals(TIMESCALE, frameProcessor.getTimescale());
+        Assert.assertEquals(LAST_FRAGMENT_TIMECODE, frameProcessor.getFragmentTimecode());
 
     }
 
@@ -70,6 +79,8 @@ public class FrameVisitorTest {
         streamingMkvReader = StreamingMkvReader.createDefault(getClustersByteSource("vogels_480.mkv"));
         streamingMkvReader.apply(frameVisitor);
         Assert.assertEquals(VIDEO_FRAMES_COUNT, frameProcessor.getFramesCount());
+        Assert.assertEquals(TIMESCALE, frameProcessor.getTimescale());
+        Assert.assertEquals(LAST_FRAGMENT_TIMECODE, frameProcessor.getFragmentTimecode());
     }
 
     @Test
@@ -78,13 +89,15 @@ public class FrameVisitorTest {
         streamingMkvReader = StreamingMkvReader.createDefault(getClustersByteSource("vogels_480.mkv"));
         streamingMkvReader.apply(frameVisitor);
         Assert.assertEquals(AUDIO_FRAMES_COUNT, frameProcessor.getFramesCount());
+        Assert.assertEquals(TIMESCALE, frameProcessor.getTimescale());
+        Assert.assertEquals(LAST_FRAGMENT_TIMECODE, frameProcessor.getFragmentTimecode());
     }
 
-    private InputStreamParserByteSource getClustersByteSource(String name) throws IOException {
+    private InputStreamParserByteSource getClustersByteSource(final String name) throws IOException {
         return getInputStreamParserByteSource(name);
     }
 
-    private InputStreamParserByteSource getInputStreamParserByteSource(String fileName) throws IOException {
+    private InputStreamParserByteSource getInputStreamParserByteSource(final String fileName) throws IOException {
         final InputStream in = TestResourceUtil.getTestInputStream(fileName);
         return new InputStreamParserByteSource(in);
     }

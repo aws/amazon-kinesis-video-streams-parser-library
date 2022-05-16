@@ -82,7 +82,7 @@ with the AWS SDK for the Kinesis Video. This example provides examples for
 * Create a stream, deleting and recreating if the stream of the same name already exists.
 * Call PutMedia to stream video fragments into the stream.
 * Simultaneously call GetMedia to stream video fragments out of the stream.
-* It uses the StreamingMkvParser to parse the returned the stream and apply the `OutputSegmentMerger`, `FragmentMetadataVisitor` visitors
+* It uses the StreamingMkvReader to parse the returned the stream and apply the `OutputSegmentMerger`, `FragmentMetadataVisitor` visitors
 along with a local one as part of the same `CompositeMkvElementVisitor` visitor.
 
 ### KinesisVideoRendererExample
@@ -128,6 +128,49 @@ To run the sample follow the below steps:
  the new Kinesis Video stream might be delayed significantly.
 
 ## Release Notes
+
+### Release 1.2.4 (Mar 2022)
+* Update amazon-kinesis-client from 1.14.7 to 1.14.8
+
+### Release 1.2.3 (Feb 2022)
+* Update slf4j-reload4j and slf4j-api from 1.7.35 to 1.7.36
+* Update aws-lambda-java-events from 1.2.0 to 2.2.9
+* Update amazon-kinesis-video-streams-producer-sdk-java from 1.8.0 to 1.12.0
+* Update aws-java-sdk-bom from 1.11.487 to 1.12.162
+
+### Release 1.2.2 (Jan 2022)
+* Update slf4j-reload4j(slf4j-log4j12) and slf4j-api from 1.7.33 to 1.7.35
+* Update amazon-kinesis-client from 1.9.3 to 1.14.7
+* Update aws-lambda-java-core from 1.2.0 to 1.2.1
+* Update junit from 4.13.1 to 4.13.2
+* Update lombok from 1.18.16 to 1.18.22
+* Update commons-lang3 from 3.6 to 3.12.0
+* Update powermock-mockito-release-full from 1.6.3 to 1.6.4
+* Update maven-compiler-plugin from 3.2 to 3.9.0
+* Update lombok-maven-plugin from 1.18.16.0 to 1.18.20.0
+* Update maven-javadoc-plugin from 3.1.1 to 3.3.1
+* Update maven-source-plugin from 3.0.1 to 3.2.1
+* Update maven-shade-plugin from 2.3 to 3.2.4
+
+### Release 1.2.1 (Jan 2022)
+* Update slf4j-log4j12 and slf4j-api from 1.7.25 to 1.7.33
+* Update log4j-slf4j-impl from 2.8.2 to 2.17.1
+
+### Release 1.2.0 (Jan 2022)
+* Move from aws-lambda-java-log4j 1.1.0 to aws-lambda-java-log4j2 1.5.1 to address CVE
+* Update log4j to 2.17.1 to address CVE
+
+### Release 1.1.0 (Dec 2021)
+* Add ListFragment worker and update GetMediaForFragmentListWorker
+* Upgrade Log4j to 2.16 to address CVE
+
+
+### Release 1.0.15 (Aug 2020)
+* Added new cluster packing option to the `OputputSegmentMerger` to enable creation of a playable MKV file from a sparse KVS stream.
+* Added parsing of audio specific fields from the MKV track header.
+* Bump some dependency versions.
+* Modify the log level on some log messages.
+
 ### Release 1.0.14 (Aug 2019)
 * Fixed frame timecode during re-encoding in KinesisVideoRekognitionLambdaExample
 * Fixed region for derived KVS Stream

@@ -17,11 +17,11 @@ import com.amazonaws.kinesisvideo.parser.TestResourceUtil;
 import com.amazonaws.kinesisvideo.parser.ebml.EBMLTypeInfo;
 import com.amazonaws.kinesisvideo.parser.ebml.InputStreamParserByteSource;
 import com.amazonaws.kinesisvideo.parser.ebml.MkvTypeInfos;
+import com.amazonaws.kinesisvideo.parser.mkv.MkvElement;
+import com.amazonaws.kinesisvideo.parser.mkv.MkvElementVisitException;
 import com.amazonaws.kinesisvideo.parser.mkv.StreamingMkvReader;
 import com.amazonaws.kinesisvideo.parser.mkv.visitors.CountVisitor;
 import com.amazonaws.kinesisvideo.parser.mkv.visitors.ElementSizeAndOffsetVisitor;
-import com.amazonaws.kinesisvideo.parser.mkv.MkvElement;
-import com.amazonaws.kinesisvideo.parser.mkv.MkvElementVisitException;
 import org.apache.commons.lang3.time.StopWatch;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -31,7 +31,6 @@ import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -61,18 +60,15 @@ public class OutputSegmentMergerTest {
      * output_get_media.mkv.
      * 5.The test then parses the merged output again to print out the elements, their offsets in the merged mkv and
      * size of the element in bytes. It uses the {@link ElementSizeAndOffsetVisitor} to do this.
-     *
-     * @throws IOException
-     * @throws InterruptedException
      */
     @Test
-    public void mergeTracksAndEBML() throws IOException, InterruptedException, MkvElementVisitException {
-        List<EBMLTypeInfo> typeInfosToMergeOn = new ArrayList<>();
+    public void mergeTracksAndEBML() throws IOException, MkvElementVisitException {
+        final List<EBMLTypeInfo> typeInfosToMergeOn = new ArrayList<>();
         typeInfosToMergeOn.add(MkvTypeInfos.TRACKS);
         typeInfosToMergeOn.add(MkvTypeInfos.EBML);
 
         //Test that the merge works correctly.
-        byte [] outputBytes = mergeTestInternal(typeInfosToMergeOn);
+        final byte [] outputBytes = mergeTestInternal(typeInfosToMergeOn);
 
         //TODO: enable to write the merged output to a file.
        /* Path tmpFileName = Files.createTempFile("OutputSegmentMergerMergeTracksAndEBML", "mergedoutput.mkv");
@@ -85,23 +81,22 @@ public class OutputSegmentMergerTest {
     }
 
     @Test
-    public void mergeWithTimeCodeBackwards()
-            throws IOException, InterruptedException, MkvElementVisitException {
+    public void mergeWithTimeCodeBackwards() throws IOException, MkvElementVisitException {
         //Read all the inputBytes so that we can compare with output bytes later.
         final byte [] inputBytes = TestResourceUtil.getTestInputByteArray("output_get_media.mkv");
         final InputStream in = getInputStreamForDoubleBytes(inputBytes);
 
         //Stream to receive the merged output.
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
         //Do the actual merge.
-        OutputSegmentMerger merger =
+        final OutputSegmentMerger merger =
                 OutputSegmentMerger.createDefault(outputStream);
 
-        StreamingMkvReader mkvStreamReader =
+        final StreamingMkvReader mkvStreamReader =
                 StreamingMkvReader.createDefault(new InputStreamParserByteSource(in));
         while(mkvStreamReader.mightHaveNext()) {
-            Optional<MkvElement> mkvElement = mkvStreamReader.nextIfAvailable();
+            final Optional<MkvElement> mkvElement = mkvStreamReader.nextIfAvailable();
             if (mkvElement.isPresent()) {
                 mkvElement.get().accept(merger);
             }
@@ -111,7 +106,7 @@ public class OutputSegmentMergerTest {
         Assert.assertFalse(Arrays.equals(inputBytes, outputBytes));
 
         //Count different types of elements present in the merged stream.
-        CountVisitor countVisitor = getCountVisitorResult(outputBytes);
+        final CountVisitor countVisitor = getCountVisitorResult(outputBytes);
 
         //Validate that there are two EBML headers and segment and tracks
         //but there are 64 clusters and tracks as expected.
@@ -127,11 +122,38 @@ public class OutputSegmentMergerTest {
     }
 
     @Test
-    public void stopWithTimeCodeBackwards()
-            throws IOException, InterruptedException, MkvElementVisitException {
+    public void packClustersWithSparseData() throws IOException, MkvElementVisitException {
         //Read all the inputBytes so that we can compare with output bytes later.
-        String fileName = "output-get-media-non-increasing-timecode.mkv";
-        CountVisitor countVisitor = runMergerToStopAtFirstNonMatchingSegment(fileName);
+        final byte [] inputBytes = TestResourceUtil.getTestInputByteArray("output_get_media_sparse_fragments.mkv");
+
+        //Stream to receive the merged output.
+        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+
+        //Do the actual merge.
+        final OutputSegmentMerger merger =
+                OutputSegmentMerger.create(outputStream, OutputSegmentMerger.Configuration.builder()
+                        .packClusters(true)
+                        .build());
+
+        final StreamingMkvReader mkvStreamReader =
+                StreamingMkvReader.createDefault(new InputStreamParserByteSource(new ByteArrayInputStream(inputBytes)));
+        while(mkvStreamReader.mightHaveNext()) {
+            final Optional<MkvElement> mkvElement = mkvStreamReader.nextIfAvailable();
+            if (mkvElement.isPresent()) {
+                mkvElement.get().accept(merger);
+            }
+        }
+
+        final byte[] outputBytes = outputStream.toByteArray();
+        final byte [] expectedOutputBytes = TestResourceUtil.getTestInputByteArray("output_get_media_sparse_fragments_merged.mkv");
+        Assert.assertArrayEquals(expectedOutputBytes, outputBytes);
+    }
+
+    @Test
+    public void stopWithTimeCodeBackwards() throws IOException, MkvElementVisitException {
+        //Read all the inputBytes so that we can compare with output bytes later.
+        final String fileName = "output-get-media-non-increasing-timecode.mkv";
+        final CountVisitor countVisitor = runMergerToStopAtFirstNonMatchingSegment(fileName);
 
         //Validate that there is only one EBML header and segment and tracks,
         //only 1 cluster and other elements as expected
@@ -147,11 +169,10 @@ public class OutputSegmentMergerTest {
     }
 
     @Test
-    public void stopWithTimeCodeEqual()
-            throws IOException, InterruptedException, MkvElementVisitException {
+    public void stopWithTimeCodeEqual() throws IOException, MkvElementVisitException {
         //Read all the inputBytes so that we can compare with output bytes later.
-        String fileName = "output-get-media-equal-timecode.mkv";
-        CountVisitor countVisitor = runMergerToStopAtFirstNonMatchingSegment(fileName);
+        final String fileName = "output-get-media-equal-timecode.mkv";
+        final CountVisitor countVisitor = runMergerToStopAtFirstNonMatchingSegment(fileName);
 
         //Validate that there is only one EBML header and segment and tracks,
         //only 1 cluster and other elements as expected
@@ -168,22 +189,22 @@ public class OutputSegmentMergerTest {
 
 
 
-    private CountVisitor runMergerToStopAtFirstNonMatchingSegment(String fileName)
+    private CountVisitor runMergerToStopAtFirstNonMatchingSegment(final String fileName)
             throws IOException, MkvElementVisitException {
         final byte [] inputBytes = TestResourceUtil.getTestInputByteArray(fileName);
         final InputStream in = getInputStreamForDoubleBytes(inputBytes);
 
         //Stream to receive the merged output.
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
         //Do the actual merge.
-        OutputSegmentMerger merger =
+        final OutputSegmentMerger merger =
                 OutputSegmentMerger.createToStopAtFirstNonMatchingSegment(outputStream);
 
-        StreamingMkvReader mkvStreamReader =
+        final StreamingMkvReader mkvStreamReader =
                 StreamingMkvReader.createDefault(new InputStreamParserByteSource(in));
-        while(!merger.isDone() && mkvStreamReader.mightHaveNext()) {
-            Optional<MkvElement> mkvElement = mkvStreamReader.nextIfAvailable();
+        while (!merger.isDone() && mkvStreamReader.mightHaveNext()) {
+            final Optional<MkvElement> mkvElement = mkvStreamReader.nextIfAvailable();
             if (mkvElement.isPresent()) {
                 mkvElement.get().accept(merger);
             }
@@ -199,48 +220,49 @@ public class OutputSegmentMergerTest {
     }
 
     @Test
-    public void mergeWithStopAfterFirstSegment()
-            throws IOException, InterruptedException, MkvElementVisitException {
+    public void mergeWithStopAfterFirstSegment() throws IOException, MkvElementVisitException {
 
         //Read all the inputBytes so that we can compare with output bytes later.
-        CountVisitor countVisitor = runMergerToStopAtFirstNonMatchingSegment("output_get_media.mkv");
+        final CountVisitor countVisitor = runMergerToStopAtFirstNonMatchingSegment("output_get_media.mkv");
 
         //Validate that there is only one EBML header and segment and tracks
         //but there are 32 clusters and tracks as expected.
         assertCountsAfterMerge(countVisitor);
     }
 
-    private InputStream getInputStreamForDoubleBytes(byte[] inputBytes) throws IOException {
-        ByteArrayOutputStream doubleStream = new ByteArrayOutputStream();
+    private InputStream getInputStreamForDoubleBytes(final byte[] inputBytes) throws IOException {
+        final ByteArrayOutputStream doubleStream = new ByteArrayOutputStream();
         doubleStream.write(inputBytes);
         doubleStream.write(inputBytes);
 
         //Reading again purely to show that the OutputSegmentMerger works even with streams
-        //where all the data is not in memeory.
+        //where all the data is not in memory.
         return new ByteArrayInputStream(doubleStream.toByteArray());
     }
 
-    private byte [] mergeTestInternal(List<EBMLTypeInfo> typeInfosToMergeOn)
-            throws IOException, InterruptedException, MkvElementVisitException {
+    private byte [] mergeTestInternal(final List<EBMLTypeInfo> typeInfosToMergeOn)
+            throws IOException, MkvElementVisitException {
         //Read all the inputBytes so that we can compare with output bytes later.
         final byte [] inputBytes = TestResourceUtil.getTestInputByteArray("output_get_media.mkv");
 
 
         //Reading again purely to show that the OutputSegmentMerger works even with streams
-        //where all the data is not in memeory.
+        //where all the data is not in memory.
         final InputStream in = TestResourceUtil.getTestInputStream("output_get_media.mkv");
 
         //Stream to receive the merged output.
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
         //Do the actual merge.
-        OutputSegmentMerger merger =
-                OutputSegmentMerger.createDefault(outputStream);
+        final OutputSegmentMerger merger =
+                OutputSegmentMerger.create(outputStream, OutputSegmentMerger.Configuration.builder()
+                        .typeInfosToMergeOn(typeInfosToMergeOn)
+                        .build());
 
-        StreamingMkvReader mkvStreamReader =
+        final StreamingMkvReader mkvStreamReader =
                 StreamingMkvReader.createDefault(new InputStreamParserByteSource(in));
-        while(mkvStreamReader.mightHaveNext()) {
-            Optional<MkvElement> mkvElement = mkvStreamReader.nextIfAvailable();
+        while (mkvStreamReader.mightHaveNext()) {
+            final Optional<MkvElement> mkvElement = mkvStreamReader.nextIfAvailable();
             if (mkvElement.isPresent()) {
                 mkvElement.get().accept(merger);
             }
@@ -250,7 +272,7 @@ public class OutputSegmentMergerTest {
         Assert.assertFalse(Arrays.equals(inputBytes, outputBytes));
 
         //Count different types of elements present in the merged stream.
-        CountVisitor countVisitor = getCountVisitorResult(outputBytes);
+        final CountVisitor countVisitor = getCountVisitorResult(outputBytes);
 
         //Validate that there is only one EBML header and segment and tracks
         //but there are 5 clusters and tracks as expected.
@@ -259,7 +281,7 @@ public class OutputSegmentMergerTest {
         return outputBytes;
     }
 
-    private void assertCountsAfterMerge(CountVisitor countVisitor) {
+    private void assertCountsAfterMerge(final CountVisitor countVisitor) {
         Assert.assertEquals(1, countVisitor.getCount(MkvTypeInfos.EBML));
         Assert.assertEquals(1, countVisitor.getCount(MkvTypeInfos.EBMLVERSION));
         Assert.assertEquals(1, countVisitor.getCount(MkvTypeInfos.SEGMENT));
@@ -271,11 +293,11 @@ public class OutputSegmentMergerTest {
         Assert.assertEquals(60, countVisitor.getCount(MkvTypeInfos.TAGNAME));
     }
 
-    private CountVisitor getCountVisitorResult(byte[] outputBytes) throws MkvElementVisitException {
-        ByteArrayInputStream verifyStream = new ByteArrayInputStream(outputBytes);
+    private CountVisitor getCountVisitorResult(final byte[] outputBytes) throws MkvElementVisitException {
+        final ByteArrayInputStream verifyStream = new ByteArrayInputStream(outputBytes);
 
         //List of elements to count.
-        List<EBMLTypeInfo> typesToCount = new ArrayList<>();
+        final List<EBMLTypeInfo> typesToCount = new ArrayList<>();
         typesToCount.add(MkvTypeInfos.EBML);
         typesToCount.add(MkvTypeInfos.EBMLVERSION);
         typesToCount.add(MkvTypeInfos.SEGMENT);
@@ -287,13 +309,13 @@ public class OutputSegmentMergerTest {
         typesToCount.add(MkvTypeInfos.TAGNAME);
 
         //Create a visitor that counts the occurrences of the element.
-        CountVisitor countVisitor = new CountVisitor(typesToCount);
-        StreamingMkvReader verifyStreamReader =
+        final CountVisitor countVisitor = new CountVisitor(typesToCount);
+        final StreamingMkvReader verifyStreamReader =
                 StreamingMkvReader.createDefault(new InputStreamParserByteSource(verifyStream));
 
         //Run the visitor over the stream.
         while(verifyStreamReader.mightHaveNext()) {
-            Optional<MkvElement> mkvElement = verifyStreamReader.nextIfAvailable();
+            final Optional<MkvElement> mkvElement = verifyStreamReader.nextIfAvailable();
             if (mkvElement.isPresent()) {
                 mkvElement.get().accept(countVisitor);
             }
@@ -305,22 +327,22 @@ public class OutputSegmentMergerTest {
 
     @Ignore
     @Test
-    public void perfTest() throws IOException, MkvElementVisitException, InterruptedException {
+    public void perfTest() throws IOException, MkvElementVisitException {
         final byte [] inputBytes = TestResourceUtil.getTestInputByteArray("output_get_media.mkv");
-        int numIterations = 1000;
+        final int numIterations = 1000;
 
-        StopWatch timer = new StopWatch();
+        final StopWatch timer = new StopWatch();
         timer.start();
         for (int i = 0; i < numIterations; i++) {
-            try (ByteArrayInputStream in = new ByteArrayInputStream(inputBytes);
-                    ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-                OutputSegmentMerger merger =
+            try (final ByteArrayInputStream in = new ByteArrayInputStream(inputBytes);
+                 final ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+                final OutputSegmentMerger merger =
                         OutputSegmentMerger.createDefault(outputStream);
 
-                StreamingMkvReader mkvStreamReader =
+                final StreamingMkvReader mkvStreamReader =
                         StreamingMkvReader.createWithMaxContentSize(new InputStreamParserByteSource(in), 32000);
                 while(mkvStreamReader.mightHaveNext()) {
-                    Optional<MkvElement> mkvElement = mkvStreamReader.nextIfAvailable();
+                    final Optional<MkvElement> mkvElement = mkvStreamReader.nextIfAvailable();
                     if (mkvElement.isPresent()) {
                         mkvElement.get().accept(merger);
                     }
@@ -328,29 +350,26 @@ public class OutputSegmentMergerTest {
             }
         }
         timer.stop();
-        long totalTimeMillis = timer.getTime();
-        double totalTimeSeconds = totalTimeMillis/(double )TimeUnit.SECONDS.toMillis(1);
-        double mergeRate = (double )(inputBytes.length)*numIterations/(totalTimeSeconds*1024*1024);
+        final long totalTimeMillis = timer.getTime();
+        final double totalTimeSeconds = totalTimeMillis/(double )TimeUnit.SECONDS.toMillis(1);
+        final double mergeRate = (double )(inputBytes.length)*numIterations/(totalTimeSeconds*1024*1024);
         System.out.println("Total time "+totalTimeMillis+" ms "+" Merging rate "+mergeRate+" MB/s");
     }
 
-    private static CountVisitor getCountVisitor() {
-        return CountVisitor.create(MkvTypeInfos.CLUSTER, MkvTypeInfos.SEGMENT, MkvTypeInfos.SIMPLEBLOCK);
-    }
-
     @Test
-    public void basicTest() throws IOException, InterruptedException, MkvElementVisitException {
+    public void basicTest() throws IOException, MkvElementVisitException {
         final byte [] inputBytes = TestResourceUtil.getTestInputByteArray("output_get_media.mkv");
 
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        ByteArrayInputStream in = new ByteArrayInputStream(inputBytes);
-        OutputSegmentMerger merger =
-                new OutputSegmentMerger(outputStream, new ArrayList<>(), getCountVisitor(), false);
+        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        final ByteArrayInputStream in = new ByteArrayInputStream(inputBytes);
+        final OutputSegmentMerger merger = OutputSegmentMerger.create(outputStream, OutputSegmentMerger.Configuration.builder()
+                .typeInfosToMergeOn(new ArrayList<>())
+                .build());
 
-        StreamingMkvReader mkvStreamReader =
+        final StreamingMkvReader mkvStreamReader =
                 StreamingMkvReader.createDefault(new InputStreamParserByteSource(in));
-        while(mkvStreamReader.mightHaveNext()) {
-            Optional<MkvElement> mkvElement = mkvStreamReader.nextIfAvailable();
+        while (mkvStreamReader.mightHaveNext()) {
+            final Optional<MkvElement> mkvElement = mkvStreamReader.nextIfAvailable();
             if (mkvElement.isPresent()) {
                 mkvElement.get().accept(merger);
             }
@@ -360,10 +379,10 @@ public class OutputSegmentMergerTest {
         Assert.assertEquals(5, merger.getSegmentsCount());
         Assert.assertEquals(300, merger.getSimpleBlocksCount());
 
-        final byte []outputBytes = outputStream.toByteArray();
-        Assert.assertTrue(Arrays.equals(inputBytes, outputBytes));
+        final byte [] outputBytes = outputStream.toByteArray();
+        Assert.assertArrayEquals(inputBytes, outputBytes);
 
-        CountVisitor countVisitor = getCountVisitorResult(outputBytes);
+        final CountVisitor countVisitor = getCountVisitorResult(outputBytes);
         Assert.assertEquals(5, countVisitor.getCount(MkvTypeInfos.EBML));
         Assert.assertEquals(5, countVisitor.getCount(MkvTypeInfos.EBMLVERSION));
         Assert.assertEquals(5, countVisitor.getCount(MkvTypeInfos.SEGMENT));
@@ -376,38 +395,36 @@ public class OutputSegmentMergerTest {
     }
 
     @Test
-    public void mergeEBMLHeaders() throws IOException, InterruptedException, MkvElementVisitException {
-        List<EBMLTypeInfo> typeInfosToMergeOn = new ArrayList<>();
+    public void mergeEBMLHeaders() throws IOException, MkvElementVisitException {
+        final List<EBMLTypeInfo> typeInfosToMergeOn = new ArrayList<>();
         typeInfosToMergeOn.add(MkvTypeInfos.EBML);
 
         mergeTestInternal(typeInfosToMergeOn);
     }
 
     @Test
-    public void mergeTracks() throws IOException, InterruptedException, MkvElementVisitException {
-        List<EBMLTypeInfo> typeInfosToMergeOn = new ArrayList<>();
+    public void mergeTracks() throws IOException, MkvElementVisitException {
+        final List<EBMLTypeInfo> typeInfosToMergeOn = new ArrayList<>();
         typeInfosToMergeOn.add(MkvTypeInfos.TRACKS);
 
         mergeTestInternal(typeInfosToMergeOn);
     }
 
-
-
-    private void writeOutIdAndOffset(byte[] outputBytes) throws IOException, MkvElementVisitException {
-        ByteArrayInputStream offsetStream = new ByteArrayInputStream(outputBytes);
-        StreamingMkvReader offsetReader =
+    private void writeOutIdAndOffset(final byte[] outputBytes) throws IOException, MkvElementVisitException {
+        final ByteArrayInputStream offsetStream = new ByteArrayInputStream(outputBytes);
+        final StreamingMkvReader offsetReader =
                 StreamingMkvReader.createDefault(new InputStreamParserByteSource(offsetStream));
 
         //Write the element name, offset and size to a file.
-        Path tempFile = Files.createTempFile("Merger","offset");
-        try (BufferedWriter writer = Files.newBufferedWriter(tempFile,
+        final Path tempFile = Files.createTempFile("Merger","offset");
+        try (final BufferedWriter writer = Files.newBufferedWriter(tempFile,
                 StandardCharsets.US_ASCII,
                 StandardOpenOption.WRITE,
                 StandardOpenOption.CREATE)) {
-            ElementSizeAndOffsetVisitor offsetVisitor = new ElementSizeAndOffsetVisitor(writer);
+            final ElementSizeAndOffsetVisitor offsetVisitor = new ElementSizeAndOffsetVisitor(writer);
 
-            while(offsetReader.mightHaveNext()) {
-                Optional<MkvElement> mkvElement = offsetReader.nextIfAvailable();
+            while (offsetReader.mightHaveNext()) {
+                final Optional<MkvElement> mkvElement = offsetReader.nextIfAvailable();
                 if (mkvElement.isPresent()) {
                     mkvElement.get().accept(offsetVisitor);
                 }
@@ -416,6 +433,4 @@ public class OutputSegmentMergerTest {
             Files.delete(tempFile);
         }
     }
-
-
 }
