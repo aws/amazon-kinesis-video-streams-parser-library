@@ -34,7 +34,6 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.awt.image.BufferedImage;
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,6 +42,7 @@ import static com.google.common.base.Preconditions.checkState;
 @Slf4j
 public class H264FrameProcessor implements FrameVisitor.FrameProcessor {
 
+    private static final int VIDEO_TRACK_NO = 1;
     private static final int MILLIS_IN_SEC = 1000;
     private static final int OFFSET_DELTA_THRESHOLD = 10;
 
@@ -75,7 +75,7 @@ public class H264FrameProcessor implements FrameVisitor.FrameProcessor {
         this.h264Decoder = new H264FrameDecoder();
     }
 
-    private void initializeKinesisVideoProducer(final byte[] cpd) {
+    private void initializeKinesisVideoProducer(final int width, final int height, final byte[] cpd) {
         try {
             log.info("Initializing KVS Producer with stream name {} and region : {}",
                     outputKvsStreamName, regionName);
@@ -91,8 +91,8 @@ public class H264FrameProcessor implements FrameVisitor.FrameProcessor {
                             .withNalAdaptationFlags(StreamInfo.NalAdaptationFlags.NAL_ADAPTATION_ANNEXB_NALS)
                             .withIsAbsoluteTimecode(true)
                             .withEncodingBitRate(200000)
-                            .withHorizontalResolution(640)
-                            .withVerticalResolution(480)
+                            .withHorizontalResolution(width)
+                            .withVerticalResolution(height)
                             .withCodecPrivateData(cpd)
                             .build();
             this.KVSMediaSource = new KVSMediaSource(
@@ -132,38 +132,44 @@ public class H264FrameProcessor implements FrameVisitor.FrameProcessor {
     public void process(final Frame frame, final MkvTrackMetadata trackMetadata,
                         final Optional<FragmentMetadata> fragmentMetadata) throws FrameProcessException {
         if (rekognizedOutputs != null) {
+            // Process only for video frames
+            if (frame.getTrackNumber() == VIDEO_TRACK_NO) {
+                checkState(trackMetadata.getPixelWidth().isPresent() && trackMetadata.getPixelHeight().isPresent(),
+                        "Missing video resolution in track metadata !");
+                checkState(fragmentMetadata.isPresent(), "FragmentMetadata should be present !");
 
-            checkState(fragmentMetadata.isPresent(), "FragmentMetadata should be present !");
+                // Decode H264 frame
+                final BufferedImage decodedFrame = h264Decoder.decodeH264Frame(frame, trackMetadata);
+                log.debug("Decoded frame : {} with timecode : {} and fragment metadata : {}",
+                        frameNo, frame.getTimeCode(), fragmentMetadata.get());
 
-            // Decode H264 frame
-            final BufferedImage decodedFrame = h264Decoder.decodeH264Frame(frame, trackMetadata);
-            log.debug("Decoded frame : {} with timecode : {} and fragment metadata : {}",
-                    frameNo, frame.getTimeCode(), fragmentMetadata.get());
+                // Get Rekognition results for this fragment number
+                final Optional<RekognizedOutput> rekognizedOutput = findRekognizedOutputForFrame(frame, fragmentMetadata);
 
-            // Get Rekognition results for this fragment number
-            final Optional<RekognizedOutput> rekognizedOutput = findRekognizedOutputForFrame(frame, fragmentMetadata);
+                // Render frame with bounding box
+                final BufferedImage compositeFrame = renderFrame(decodedFrame, rekognizedOutput);
 
-            // Render frame with bounding box
-            final BufferedImage compositeFrame = renderFrame(decodedFrame, rekognizedOutput);
+                // Encode to H264 frame
+                final EncodedFrame encodedH264Frame = encodeH264Frame(compositeFrame);
+                encodedH264Frame.setTimeCode(fragmentMetadata.get().getProducerSideTimestampMillis() + frame.getTimeCode());
+                log.debug("Encoded frame : {} with timecode : {}", frameNo, encodedH264Frame.getTimeCode());
 
-            // Encode to H264 frame
-            final EncodedFrame encodedH264Frame = encodeH264Frame(compositeFrame);
-            encodedH264Frame.setTimeCode(fragmentMetadata.get().getProducerSideTimestampMillis() + frame.getTimeCode());
-            log.debug("Encoded frame : {} with timecode : {}", frameNo, encodedH264Frame.getTimeCode());
-
-            // Call PutFrame for processed encodedFrame.
-            putFrame(encodedH264Frame);
-            frameNo++;
-
+                // Call PutFrame for processed encodedFrame.
+                putFrame(encodedH264Frame, trackMetadata.getPixelWidth().get().intValue(),
+                        trackMetadata.getPixelHeight().get().intValue());
+                frameNo++;
+            } else {
+              log.debug("Skipping audio frames !");
+            }
         } else {
             log.warn("Rekognition output is empty");
         }
     }
 
-    private void putFrame(final EncodedFrame encodedH264Frame) {
+    private void putFrame(final EncodedFrame encodedH264Frame, final int width, final int height) {
         if (!isKVSProducerInitialized) {
             log.info("Initializing JNI...");
-            initializeKinesisVideoProducer(encodedH264Frame.getCpd().array());
+            initializeKinesisVideoProducer(width, height, encodedH264Frame.getCpd().array());
             isKVSProducerInitialized = true;
         }
         KVSMediaSource.putFrameData(encodedH264Frame);
