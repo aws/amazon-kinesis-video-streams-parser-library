@@ -29,8 +29,6 @@ jobs:
           java-version: ${{ matrix.java }}
           distribution: 'adopt'
           cache: maven
-      - name: Build with Maven
-        run: mvn clean compile assembly:single
       - name: Run tests
         run: mvn clean install
         shell: bash
