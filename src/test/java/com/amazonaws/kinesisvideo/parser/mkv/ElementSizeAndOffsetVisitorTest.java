@@ -40,7 +40,7 @@ public class ElementSizeAndOffsetVisitorTest {
         StreamingMkvReader offsetReader =
                 new StreamingMkvReader(false, new ArrayList<>(), new InputStreamParserByteSource(in));
 
-        Path tmpFilePath =  Files.createTempFile("basicTest:"+fileName+":","offset");
+        Path tmpFilePath =  Files.createTempFile("basicTest-"+fileName+"-","offset");
         try (BufferedWriter writer = Files.newBufferedWriter(tmpFilePath,
                 StandardCharsets.US_ASCII,
                 StandardOpenOption.WRITE,
