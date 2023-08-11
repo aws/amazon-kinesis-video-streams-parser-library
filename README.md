@@ -127,6 +127,19 @@ To run the sample follow the below steps:
 * NOTE: As this lambda executes resource intense decoding and encoding (using Jcodec which is not optimal https://github.com/jcodec/jcodec#performance--quality-considerations),
  the new Kinesis Video stream might be delayed significantly.
 
+### Amazon Connect Demo
+`LMSDemo` provides an example of how to ingest audio from a KVS stream in the context of Amazon Connect.
+It parses data from two tracks, namely `AUDIO_FROM_CUSTOMER` and `AUDIO_TO_CUSTOMER`, and places this data into a `java.io.OutputStream` for consumption.
+
+This demo consists of 3 files:
+* `LMSDemo.java` - is a class with a main method that invokes LMSExample.
+* `LMSExample.java` - is similar to the examples provided in the Kinesis Video Streams Parser library. It gets media from the specified Kinesis Video Streams with the specified fragment number. This code sample includes frame processing to separate the tracks.
+* `LMSFrameProcessor.java` - is invoked by LMSExample to save data from Kinesis Video Streams to the specified output stream. Use a file output stream to save the output to a file. This code sample also includes frame processing to separate the tracks.
+
+After building this package using `mvn clean install`, the `LMSDemo` can be executed locally via `java -cp .\target\amazon-kinesis-video-streams-parser-library-1.2.5.jar -cp .\target\amazon-kinesis-video-streams-parser-library-1.2.5-shaded.jar com/amazonaws/kinesisvideo/parser/demo/LMSDemo`
+
+For more info: https://docs.aws.amazon.com/connect/latest/adminguide/access-media-stream-data.html
+
 ## Release Notes
 
 ### Release 1.2.4 (Mar 2022)
