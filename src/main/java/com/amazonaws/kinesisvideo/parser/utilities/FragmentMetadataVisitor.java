@@ -352,7 +352,7 @@ public class FragmentMetadataVisitor extends CompositeMkvElementVisitor {
         Map<Long, String> parentElementNumberToTagValue = tagElements.stream()
                 .filter(e -> MkvTypeInfos.TAGSTRING.equals(e.getElementMetaData().getTypeInfo()))
                 .filter(e -> MkvTypeInfos.SIMPLETAG.equals(getParentElement(e).getTypeInfo()))
-                .collect(Collectors.toMap(e -> getParentElement(e).getElementNumber(), this::getMkvElementStringVal));
+                .collect(Collectors.toMap(e -> getParentElement(e).getElementNumber(), this::getMkvElementStringVal, (a,b)->a));
         return tagNameToParentElementNumber.entrySet()
                 .stream()
                 .collect(Collectors.toMap(e -> e.getKey(),
