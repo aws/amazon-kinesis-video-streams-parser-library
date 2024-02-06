@@ -13,12 +13,12 @@ See the License for the specific language governing permissions and limitations 
 */
 package com.amazonaws.kinesisvideo.parser.examples;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoPutMediaClientBuilder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.kinesisvideo.KinesisVideoAsyncClientBuilder;
 
 /**
  * Abstract class for all example classes that use the Kinesis Video clients.
@@ -26,12 +26,12 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Getter
 public abstract class KinesisVideoCommon {
-    private final Regions region;
-    private final AWSCredentialsProvider credentialsProvider;
+    private final Region region;
+    private final AwsCredentialsProvider credentialsProvider;
     protected final String streamName;
 
-    protected void configureClient(AwsClientBuilder clientBuilder) {
-        clientBuilder.withCredentials(credentialsProvider).withRegion(region);
+    protected void configureClient(KinesisVideoAsyncClientBuilder clientBuilder) {
+        clientBuilder.credentialsProvider(credentialsProvider).region(region);
     }
 
     protected void conifgurePutMediaClient(AmazonKinesisVideoPutMediaClientBuilder builder) {

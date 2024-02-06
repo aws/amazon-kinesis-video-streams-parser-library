@@ -29,10 +29,8 @@ package com.amazonaws.kinesisvideo.parser.kinesis;
  */
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
@@ -42,23 +40,30 @@ import com.amazonaws.kinesisvideo.parser.rekognition.pojo.MatchedFace;
 import com.amazonaws.kinesisvideo.parser.rekognition.pojo.RekognitionOutput;
 import com.amazonaws.kinesisvideo.parser.rekognition.pojo.RekognizedFragmentsIndex;
 import com.amazonaws.kinesisvideo.parser.rekognition.pojo.RekognizedOutput;
-import com.amazonaws.services.kinesis.clientlibrary.exceptions.InvalidStateException;
-import com.amazonaws.services.kinesis.clientlibrary.exceptions.ShutdownException;
-import com.amazonaws.services.kinesis.clientlibrary.exceptions.ThrottlingException;
-import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessor;
-import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorCheckpointer;
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.ShutdownReason;
-import com.amazonaws.services.kinesis.model.Record;
+
+import software.amazon.kinesis.exceptions.ThrottlingException;
+import software.amazon.kinesis.exceptions.InvalidStateException;
+import software.amazon.kinesis.exceptions.ShutdownException;
+
+import software.amazon.kinesis.lifecycle.events.InitializationInput;
+import software.amazon.kinesis.lifecycle.events.LeaseLostInput;
+import software.amazon.kinesis.lifecycle.events.ProcessRecordsInput;
+
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import software.amazon.kinesis.lifecycle.events.ShardEndedInput;
+import software.amazon.kinesis.lifecycle.events.ShutdownRequestedInput;
+import software.amazon.kinesis.processor.RecordProcessorCheckpointer;
+import software.amazon.kinesis.processor.ShardRecordProcessor;
+import software.amazon.kinesis.retrieval.KinesisClientRecord;
 
 /**
  * Processes records and checkpoints progress.
  */
-public class KinesisRecordProcessor implements IRecordProcessor {
+public class KinesisRecordProcessor implements ShardRecordProcessor {
 
     private static final Log LOG = LogFactory.getLog(KinesisRecordProcessor.class);
     private String kinesisShardId;
@@ -72,8 +77,6 @@ public class KinesisRecordProcessor implements IRecordProcessor {
     private static final long CHECKPOINT_INTERVAL_MILLIS = 1000L;
     private long nextCheckpointTimeInMillis;
 
-    private final CharsetDecoder decoder = Charset.forName("UTF-8").newDecoder();
-
     private final RekognizedFragmentsIndex rekognizedFragmentsIndex;
     private StringBuilder stringBuilder = new StringBuilder();
 
@@ -85,25 +88,27 @@ public class KinesisRecordProcessor implements IRecordProcessor {
      * {@inheritDoc}
      */
     @Override
-    public void initialize(final String shardId) {
-        LOG.info("Initializing record processor for shard: " + shardId);
-        this.kinesisShardId = shardId;
+    public void initialize(final InitializationInput initializationInput) {
+        LOG.info("Initializing record processor for shard: " + initializationInput.shardId());
+        this.kinesisShardId = initializationInput.shardId();
     }
 
+
+    //     public void processRecords(final List<Record> records, final IRecordProcessorCheckpointer checkpointer) {
     /**
      * {@inheritDoc}
      */
     @Override
-    public void processRecords(final List<Record> records, final IRecordProcessorCheckpointer checkpointer) {
-        LOG.info("Processing " + records.size() + " records from " + kinesisShardId);
+    public void processRecords(final ProcessRecordsInput processRecordsInput) {
+        LOG.info("Processing " + processRecordsInput.records().size() + " records from " + this.kinesisShardId);
 
         // Process records and perform all exception handling.
-        processRecordsWithRetries(records);
+        processRecordsWithRetries(processRecordsInput.records());
 
         // Checkpoint once every checkpoint interval.
-        if (System.currentTimeMillis() > nextCheckpointTimeInMillis) {
-            checkpoint(checkpointer);
-            nextCheckpointTimeInMillis = System.currentTimeMillis() + CHECKPOINT_INTERVAL_MILLIS;
+        if (System.currentTimeMillis() > this.nextCheckpointTimeInMillis) {
+            checkpoint(processRecordsInput.checkpointer());
+            this.nextCheckpointTimeInMillis = System.currentTimeMillis() + CHECKPOINT_INTERVAL_MILLIS;
         }
     }
 
@@ -112,8 +117,8 @@ public class KinesisRecordProcessor implements IRecordProcessor {
      *
      * @param records Data records to be processed.
      */
-    private void processRecordsWithRetries(final List<Record> records) {
-        for (final Record record : records) {
+    private void processRecordsWithRetries(final List<KinesisClientRecord> records) {
+        for (final KinesisClientRecord record : records) {
             boolean processedSuccessfully = false;
             for (int i = 0; i < NUM_RETRIES; i++) {
                 try {
@@ -143,15 +148,15 @@ public class KinesisRecordProcessor implements IRecordProcessor {
      *
      * @param record The record to be processed.
      */
-    private void processSingleRecord(final Record record) {
+    private void processSingleRecord(final KinesisClientRecord record) {
 
         String data = null;
         final ObjectMapper mapper = new ObjectMapper();
         try {
             // For this app, we interpret the payload as UTF-8 chars.
-            final ByteBuffer buffer = record.getData();
-            data = new String(buffer.array(), "UTF-8");
-            stringBuilder = stringBuilder.append(data).append(DELIMITER);
+            final ByteBuffer buffer = record.data();
+            data = new String(buffer.array(), StandardCharsets.UTF_8);
+            stringBuilder.append(data).append(DELIMITER);
 
             final RekognitionOutput output = mapper.readValue(data, RekognitionOutput.class);
 
@@ -201,8 +206,6 @@ public class KinesisRecordProcessor implements IRecordProcessor {
 
         } catch (final NumberFormatException e) {
             LOG.info("Record does not match sample record format. Ignoring record with data; " + data);
-        } catch (final UnsupportedEncodingException e) {
-            e.printStackTrace();
         } catch (final JsonParseException e) {
             e.printStackTrace();
         } catch (final JsonMappingException e) {
@@ -212,22 +215,32 @@ public class KinesisRecordProcessor implements IRecordProcessor {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
+
     @Override
-    public void shutdown(final IRecordProcessorCheckpointer checkpointer, final ShutdownReason reason) {
-        LOG.info("Shutting down record processor for shard: " + kinesisShardId);
-        // Important to checkpoint after reaching end of shard, so we can start processing data from child shards.
-        if (reason == ShutdownReason.TERMINATE) {
-            checkpoint(checkpointer);
+    public void leaseLost(final LeaseLostInput leaseLostInput) {
+        LOG.info("Lost lease, so terminating.");
+    }
+
+    @Override
+    public void shardEnded(final ShardEndedInput shardEndedInput) {
+        try {
+            LOG.info("Reached shard end, Checkpointing.");
+            shardEndedInput.checkpointer().checkpoint();
+        } catch (final ShutdownException | InvalidStateException e) {
+            LOG.error("Exception while checkpointing at shard end. Giving up.", e);
         }
+    }
+
+    @Override
+    public void shutdownRequested(final ShutdownRequestedInput shutdownRequestedInput) {
+        LOG.info("Scheduler is shutting down, checkpointing.");
+        shutdownRequestedInput.checkpointer().checkpoint();
     }
 
     /** Checkpoint with retries.
      * @param checkpointer
      */
-    private void checkpoint(final IRecordProcessorCheckpointer checkpointer) {
+    private void checkpoint(final RecordProcessorCheckpointer checkpointer) {
         LOG.info("Checkpointing shard " + kinesisShardId);
         for (int i = 0; i < NUM_RETRIES; i++) {
             try {
@@ -251,6 +264,7 @@ public class KinesisRecordProcessor implements IRecordProcessor {
                 LOG.error("Cannot save checkpoint to the DynamoDB table used by the Amazon Kinesis Client Library.", e);
                 break;
             }
+
             try {
                 Thread.sleep(BACKOFF_TIME_IN_MILLIS);
             } catch (final InterruptedException e) {

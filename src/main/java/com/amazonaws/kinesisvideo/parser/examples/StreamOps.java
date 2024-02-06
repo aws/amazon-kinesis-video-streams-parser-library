@@ -14,22 +14,22 @@ See the License for the specific language governing permissions and limitations 
 package com.amazonaws.kinesisvideo.parser.examples;
 
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
-
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.kinesisvideo.AmazonKinesisVideo;
-import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoClientBuilder;
-import com.amazonaws.services.kinesisvideo.model.CreateStreamRequest;
-import com.amazonaws.services.kinesisvideo.model.DeleteStreamRequest;
-import com.amazonaws.services.kinesisvideo.model.DescribeStreamRequest;
-import com.amazonaws.services.kinesisvideo.model.ResourceNotFoundException;
-import com.amazonaws.services.kinesisvideo.model.StreamInfo;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.kinesisvideo.KinesisVideoAsyncClient;
+import software.amazon.awssdk.services.kinesisvideo.KinesisVideoAsyncClientBuilder;
+import software.amazon.awssdk.services.kinesisvideo.model.CreateStreamRequest;
+import software.amazon.awssdk.services.kinesisvideo.model.DeleteStreamRequest;
+import software.amazon.awssdk.services.kinesisvideo.model.DescribeStreamRequest;
+import software.amazon.awssdk.services.kinesisvideo.model.ResourceNotFoundException;
+import software.amazon.awssdk.services.kinesisvideo.model.StreamInfo;
 
 @Slf4j
 @Getter
@@ -37,16 +37,16 @@ public class StreamOps extends KinesisVideoCommon {
     private static final long SLEEP_PERIOD_MILLIS = TimeUnit.SECONDS.toMillis(3);
     private static final int DATA_RETENTION_IN_HOURS = 48;
     private final String streamName;
-    final AmazonKinesisVideo amazonKinesisVideo;
+    final KinesisVideoAsyncClient kinesisVideoAsyncClient;
 
     @Builder
-    public StreamOps(Regions region,
-                     String streamName, AWSCredentialsProvider credentialsProvider) {
+    public StreamOps(Region region,
+                     String streamName, AwsCredentialsProvider credentialsProvider) {
         super(region, credentialsProvider, streamName);
         this.streamName = streamName;
-        final AmazonKinesisVideoClientBuilder builder = AmazonKinesisVideoClientBuilder.standard();
+        final KinesisVideoAsyncClientBuilder builder = KinesisVideoAsyncClient.builder();
         configureClient(builder);
-        this.amazonKinesisVideo = builder.build();
+        this.kinesisVideoAsyncClient = builder.build();
     }
 
     /**
@@ -58,36 +58,40 @@ public class StreamOps extends KinesisVideoCommon {
         deleteStreamIfPresent();
 
         //create the stream.
-        amazonKinesisVideo.createStream(new CreateStreamRequest().withStreamName(streamName)
-                .withDataRetentionInHours(DATA_RETENTION_IN_HOURS)
-                .withMediaType("video/h264"));
+        createStream();
+
         log.info("CreateStream called for stream {}", streamName);
         //wait for stream to become active.
         final Optional<StreamInfo> createdStreamInfo =
-                waitForStateToMatch((s) -> s.isPresent() && "ACTIVE".equals(s.get().getStatus()));
+                waitForStateToMatch((s) -> s.isPresent() && "ACTIVE".equals(s.get().status()));
         //some basic validations on the response of the create stream
         Validate.isTrue(createdStreamInfo.isPresent());
-        Validate.isTrue(createdStreamInfo.get().getDataRetentionInHours() == DATA_RETENTION_IN_HOURS);
-        log.info("Stream {} created ARN {}", streamName, createdStreamInfo.get().getStreamARN());
+        Validate.isTrue(createdStreamInfo.get().dataRetentionInHours() == DATA_RETENTION_IN_HOURS);
+        log.info("Stream {} created ARN {}", streamName, createdStreamInfo.get().streamARN());
     }
 
     public void createStreamIfNotExist() throws InterruptedException {
         final Optional<StreamInfo> streamInfo = getStreamInfo();
         log.info("Stream {} exists {}", streamName, streamInfo.isPresent());
         if (!streamInfo.isPresent()) {
-            //create the stream.
-            amazonKinesisVideo.createStream(new CreateStreamRequest().withStreamName(streamName)
-                    .withDataRetentionInHours(DATA_RETENTION_IN_HOURS)
-                    .withMediaType("video/h264"));
+            createStream();
             log.info("CreateStream called for stream {}", streamName);
             //wait for stream to become active.
             final Optional<StreamInfo> createdStreamInfo =
-                    waitForStateToMatch((s) -> s.isPresent() && "ACTIVE".equals(s.get().getStatus()));
+                    waitForStateToMatch((s) -> s.isPresent() && "ACTIVE".equals(s.get().status()));
             //some basic validations on the response of the create stream
             Validate.isTrue(createdStreamInfo.isPresent());
-            Validate.isTrue(createdStreamInfo.get().getDataRetentionInHours() == DATA_RETENTION_IN_HOURS);
-            log.info("Stream {} created ARN {}", streamName, createdStreamInfo.get().getStreamARN());
+            Validate.isTrue(createdStreamInfo.get().dataRetentionInHours() == DATA_RETENTION_IN_HOURS);
+            log.info("Stream {} created ARN {}", streamName, createdStreamInfo.get().streamARN());
         }
+    }
+
+    private void createStream() {
+        kinesisVideoAsyncClient.createStream(CreateStreamRequest.builder()
+                .streamName(streamName)
+                .dataRetentionInHours(DATA_RETENTION_IN_HOURS)
+                .mediaType("video/h264")
+                .build());
     }
 
     private void deleteStreamIfPresent() throws InterruptedException {
@@ -95,8 +99,11 @@ public class StreamOps extends KinesisVideoCommon {
         log.info("Stream {} exists {}", streamName, streamInfo.isPresent());
         if (streamInfo.isPresent()) {
             //Delete the stream
-            amazonKinesisVideo.deleteStream(new DeleteStreamRequest().withStreamARN(streamInfo.get().getStreamARN()));
-            log.info("DeleteStream called for stream {} ARN {} ", streamName, streamInfo.get().getStreamARN());
+            kinesisVideoAsyncClient.deleteStream(DeleteStreamRequest.builder()
+                    .streamARN(streamInfo.get().streamARN())
+                    .build());
+
+            log.info("DeleteStream called for stream {} ARN {} ", streamName, streamInfo.get().streamARN());
             //Wait for stream to be deleted
             waitForStateToMatch((s) -> !s.isPresent());
             log.info("Stream {} deleted", streamName);
@@ -117,9 +124,10 @@ public class StreamOps extends KinesisVideoCommon {
 
     private Optional<StreamInfo> getStreamInfo() {
         try {
-            return Optional.ofNullable(amazonKinesisVideo.describeStream(new DescribeStreamRequest().withStreamName(
-                    streamName)).getStreamInfo());
-        } catch (ResourceNotFoundException e) {
+            return Optional.ofNullable(kinesisVideoAsyncClient.describeStream(DescribeStreamRequest.builder()
+                    .streamName(streamName)
+                    .build()).get().streamInfo());
+        } catch (ResourceNotFoundException | InterruptedException | ExecutionException e) {
             return Optional.empty();
         }
     }

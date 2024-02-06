@@ -13,11 +13,11 @@ See the License for the specific language governing permissions and limitations 
 */
 package com.amazonaws.kinesisvideo.parser.examples.lambda;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.kinesisvideo.parser.utilities.DynamoDBHelper;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import lombok.extern.slf4j.Slf4j;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 import java.util.Map;
 import java.util.Optional;
@@ -36,7 +36,7 @@ public class DDBBasedFragmentCheckpointManager implements FragmentCheckpointMana
     private static final String UPDATED_TIME = "UpdatedTime";
     private final DynamoDBHelper dynamoDBHelper;
 
-    public DDBBasedFragmentCheckpointManager(final Regions region, final AWSCredentialsProvider credentialsProvider) {
+    public DDBBasedFragmentCheckpointManager(final Region region, final AwsCredentialsProvider credentialsProvider) {
         dynamoDBHelper = new DynamoDBHelper(region, credentialsProvider);
         dynamoDBHelper.createTableIfDoesntExist();
     }
@@ -52,10 +52,10 @@ public class DDBBasedFragmentCheckpointManager implements FragmentCheckpointMana
         final Map<String, AttributeValue> result = dynamoDBHelper.getItem(streamName);
         if (result != null && result.containsKey(FRAGMENT_NUMBER)) {
             return Optional.of(new FragmentCheckpoint(streamName,
-                    result.get(FRAGMENT_NUMBER).getS(),
-                    Long.parseLong(result.get(PRODUCER_TIME).getN()),
-                    Long.parseLong(result.get(SERVER_TIME).getN()),
-                    Long.parseLong(result.get(UPDATED_TIME).getN())));
+                    result.get(FRAGMENT_NUMBER).s(),
+                    Long.parseLong(result.get(PRODUCER_TIME).n()),
+                    Long.parseLong(result.get(SERVER_TIME).n()),
+                    Long.parseLong(result.get(UPDATED_TIME).n())));
         }
         return Optional.empty();
     }

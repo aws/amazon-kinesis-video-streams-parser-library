@@ -32,6 +32,9 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
 
 import java.io.File;
 import java.io.IOException;
@@ -59,7 +62,7 @@ public final class KinesisVideoRekognitionLambdaExample implements RequestHandle
     private static final int NUM_RETRIES = 10;
     private static final int KCL_INIT_DELAY_MILLIS = 10_000;
     private final ExecutorService kdsWorkers = Executors.newFixedThreadPool(100);
-    private final AWSCredentialsProvider credentialsProvider = new DefaultAWSCredentialsProviderChain();
+    private final AwsCredentialsProvider credentialsProvider = DefaultCredentialsProvider.create();
     private final RekognizedFragmentsIndex rekognizedFragmentsIndex = new RekognizedFragmentsIndex();
 
     private String inputKvsStreamName;
@@ -88,7 +91,7 @@ public final class KinesisVideoRekognitionLambdaExample implements RequestHandle
     /**
      * Initialize method to set variables.
      */
-    private void initialize(final String kvsStreamName, final Regions regionName) {
+    private void initialize(final String kvsStreamName, final Region regionName) {
         this.inputKvsStreamName = kvsStreamName;
         outputKvsStreamName = kvsStreamName + "-Rekognized";
         kvsClient = new StreamOps(regionName, kvsStreamName, credentialsProvider);
@@ -132,7 +135,7 @@ public final class KinesisVideoRekognitionLambdaExample implements RequestHandle
                         Collections.singletonList(fragmentNumber),
                         kvsClient.getCredentialsProvider(),
                         kvsClient.getRegion(),
-                        kvsClient.getAmazonKinesisVideo(),
+                        kvsClient.getKinesisVideoAsyncClient(),
                         frameVisitor);
                 h264FrameProcessor.setRekognizedOutputs(rekognizedOutputList);
                 worker.run();

@@ -18,11 +18,16 @@ import java.util.UUID;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.kinesisvideo.parser.rekognition.pojo.RekognizedFragmentsIndex;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorFactory;
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.InitialPositionInStream;
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibConfiguration;
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
+import software.amazon.awssdk.services.kinesis.KinesisAsyncClient;
+import software.amazon.kinesis.common.InitialPositionInStream;
+import software.amazon.kinesis.common.KinesisClientUtil;
+import software.amazon.kinesis.processor.ShardRecordProcessorFactory;
+
+import software.amazon.kinesis.coordinator.Scheduler;
+import software.amazon.kinesis.common.ConfigsBuilder;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 
@@ -39,12 +44,12 @@ public final class KinesisDataStreamsWorker implements Runnable {
     private static final InitialPositionInStream SAMPLE_APPLICATION_INITIAL_POSITION_IN_STREAM =
             InitialPositionInStream.LATEST;
 
-    private final Regions region;
+    private final Region region;
     private final AWSCredentialsProvider credentialsProvider;
     private final String kdsStreamName;
     private final RekognizedFragmentsIndex rekognizedFragmentsIndex;
 
-    public static KinesisDataStreamsWorker create(final Regions region, final AWSCredentialsProvider credentialsProvider,
+    public static KinesisDataStreamsWorker create(final Region region, final AWSCredentialsProvider credentialsProvider,
                               final String kdsStreamName, final RekognizedFragmentsIndex rekognizedFragmentsIndex) {
         return new KinesisDataStreamsWorker(region, credentialsProvider, kdsStreamName, rekognizedFragmentsIndex);
     }
@@ -54,17 +59,22 @@ public final class KinesisDataStreamsWorker implements Runnable {
 
         try {
             String workerId = InetAddress.getLocalHost().getCanonicalHostName() + ":" + UUID.randomUUID();
-            KinesisClientLibConfiguration kinesisClientLibConfiguration =
-                    new KinesisClientLibConfiguration(APPLICATION_NAME,
-                            kdsStreamName,
-                            credentialsProvider,
-                            workerId);
-            kinesisClientLibConfiguration.withInitialPositionInStream(SAMPLE_APPLICATION_INITIAL_POSITION_IN_STREAM)
-                    .withRegionName(region.getName());
-
-            final IRecordProcessorFactory recordProcessorFactory =
+            final KinesisAsyncClient kinesisClient = KinesisClientUtil.createKinesisAsyncClient(KinesisAsyncClient.builder().region(region));
+            final DynamoDbAsyncClient dynamoClient = DynamoDbAsyncClient.builder().region(region).build();
+            final CloudWatchAsyncClient cloudWatchClient = CloudWatchAsyncClient.builder().region(region).build();
+            final ShardRecordProcessorFactory shardRecordProcessorFactory =
                     () -> new KinesisRecordProcessor(rekognizedFragmentsIndex, credentialsProvider);
-            final Worker worker = new Worker(recordProcessorFactory, kinesisClientLibConfiguration);
+
+            final ConfigsBuilder configsBuilder = new ConfigsBuilder(kdsStreamName, APPLICATION_NAME, kinesisClient, dynamoClient, cloudWatchClient, workerId, shardRecordProcessorFactory);
+            final Scheduler scheduler = new Scheduler(
+                    configsBuilder.checkpointConfig(),
+                    configsBuilder.coordinatorConfig(),
+                    configsBuilder.leaseManagementConfig(),
+                    configsBuilder.lifecycleConfig(),
+                    configsBuilder.metricsConfig(),
+                    configsBuilder.processorConfig(),
+                    configsBuilder.retrievalConfig()
+            );
 
             System.out.printf("Running %s to process stream %s as worker %s...",
                     APPLICATION_NAME,
@@ -73,7 +83,7 @@ public final class KinesisDataStreamsWorker implements Runnable {
 
             int exitCode = 0;
             try {
-                worker.run();
+                scheduler.run();
             } catch (Throwable t) {
                 System.err.println("Caught throwable while processing data.");
                 t.printStackTrace();

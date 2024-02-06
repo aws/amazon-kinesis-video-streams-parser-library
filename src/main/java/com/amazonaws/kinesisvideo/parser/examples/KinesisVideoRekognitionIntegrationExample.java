@@ -109,7 +109,7 @@ public class KinesisVideoRekognitionIntegrationExample extends KinesisVideoCommo
                 getCredentialsProvider(),
                 getStreamName(),
                 inputStream,
-                streamOps.getAmazonKinesisVideo());
+                streamOps.getKinesisVideoAsyncClient());
         executorService.submit(putMediaWorker);
     }
 
@@ -131,7 +131,7 @@ public class KinesisVideoRekognitionIntegrationExample extends KinesisVideoCommo
                 getCredentialsProvider(),
                 getStreamName(),
                 new StartSelector().withStartSelectorType(StartSelectorType.NOW),
-                streamOps.getAmazonKinesisVideo(),
+                streamOps.getKinesisVideoAsyncClient(),
                 frameVisitor);
         executorService.submit(getMediaWorker);
     }

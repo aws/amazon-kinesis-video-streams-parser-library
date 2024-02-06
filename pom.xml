@@ -44,9 +44,9 @@
                 <version>${jackson.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.amazonaws</groupId>
-                <artifactId>aws-java-sdk-bom</artifactId>
-                <version>1.12.162</version>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>2.20.70</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -56,32 +56,35 @@
     <dependencies>
         <!-- AWS SDK dependencies included in BOM -->
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-rekognition</artifactId>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>rekognition</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-kinesisvideo</artifactId>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>kinesisvideo</artifactId>
         </dependency>
         <dependency>
-            <artifactId>aws-java-sdk-kinesis</artifactId>
-            <groupId>com.amazonaws</groupId>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>kinesisvideomedia</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-dynamodb</artifactId>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>kinesisvideoarchivedmedia</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>kinesis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>dynamodb</artifactId>
         </dependency>
 
         <!-- AWS SDK dependencies not included in BOM -->
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>amazon-kinesis-video-streams-producer-sdk-java</artifactId>
-            <version>1.12.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.amazonaws</groupId>
+            <groupId>software.amazon.kinesis</groupId>
             <artifactId>amazon-kinesis-client</artifactId>
-            <version>1.14.10</version>
+            <version>2.4.8</version>
         </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
@@ -92,6 +95,10 @@
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-lambda-java-events</artifactId>
             <version>2.2.9</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>aws-crt-client</artifactId>
         </dependency>
 
         <!-- Encode/Decode dependencies -->

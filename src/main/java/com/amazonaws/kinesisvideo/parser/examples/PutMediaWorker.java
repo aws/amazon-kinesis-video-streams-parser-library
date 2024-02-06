@@ -16,6 +16,8 @@ package com.amazonaws.kinesisvideo.parser.examples;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideo;
+import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoMediaAsync;
+import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoMediaAsyncClient;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoPutMedia;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoPutMediaClient;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoPutMediaClientBuilder;
@@ -28,6 +30,8 @@ import com.amazonaws.services.kinesisvideo.model.GetDataEndpointRequest;
 import com.amazonaws.services.kinesisvideo.model.PutMediaRequest;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import software.amazon.awssdk.services.kinesisvideo.KinesisVideoAsyncClient;
+import software.amazon.awssdk.services.kinesisvideo.KinesisVideoAsyncClientBuilder;
 
 import java.io.InputStream;
 import java.util.Date;
@@ -71,6 +75,9 @@ public class PutMediaWorker extends KinesisVideoCommon implements Runnable {
     @Override
     public void run() {
         CountDownLatch latch = new CountDownLatch(1);
+        final AmazonKinesisVideoMediaAsync kinesisVideoAsyncClient = AmazonKinesisVideoMediaAsyncClient.asyncBuilder().build();
+        kinesisVideoAsyncClient.
+
         putMedia.putMedia(new PutMediaRequest().withStreamName(streamName)
                 .withFragmentTimecodeType(FragmentTimecodeType.RELATIVE)
                 .withProducerStartTimestamp(new Date())

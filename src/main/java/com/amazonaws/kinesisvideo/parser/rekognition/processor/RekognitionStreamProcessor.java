@@ -13,33 +13,32 @@ See the License for the specific language governing permissions and limitations 
 */
 package com.amazonaws.kinesisvideo.parser.rekognition.processor;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.kinesisvideo.parser.rekognition.pojo.RekognitionInput;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.rekognition.AmazonRekognition;
-import com.amazonaws.services.rekognition.AmazonRekognitionClientBuilder;
-import com.amazonaws.services.rekognition.model.CreateStreamProcessorRequest;
-import com.amazonaws.services.rekognition.model.CreateStreamProcessorResult;
-import com.amazonaws.services.rekognition.model.DeleteStreamProcessorRequest;
-import com.amazonaws.services.rekognition.model.DeleteStreamProcessorResult;
-import com.amazonaws.services.rekognition.model.DescribeStreamProcessorRequest;
-import com.amazonaws.services.rekognition.model.DescribeStreamProcessorResult;
-import com.amazonaws.services.rekognition.model.FaceSearchSettings;
-import com.amazonaws.services.rekognition.model.KinesisDataStream;
-import com.amazonaws.services.rekognition.model.KinesisVideoStream;
-import com.amazonaws.services.rekognition.model.ListStreamProcessorsRequest;
-import com.amazonaws.services.rekognition.model.ListStreamProcessorsResult;
-import com.amazonaws.services.rekognition.model.ResourceNotFoundException;
-import com.amazonaws.services.rekognition.model.StartStreamProcessorRequest;
-import com.amazonaws.services.rekognition.model.StartStreamProcessorResult;
-import com.amazonaws.services.rekognition.model.StopStreamProcessorRequest;
-import com.amazonaws.services.rekognition.model.StopStreamProcessorResult;
-import com.amazonaws.services.rekognition.model.StreamProcessor;
-import com.amazonaws.services.rekognition.model.StreamProcessorInput;
-import com.amazonaws.services.rekognition.model.StreamProcessorOutput;
-import com.amazonaws.services.rekognition.model.StreamProcessorSettings;
-import com.amazonaws.services.rekognition.model.StreamProcessorStatus;
 import lombok.extern.slf4j.Slf4j;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.rekognition.RekognitionClient;
+import software.amazon.awssdk.services.rekognition.model.CreateStreamProcessorRequest;
+import software.amazon.awssdk.services.rekognition.model.CreateStreamProcessorResponse;
+import software.amazon.awssdk.services.rekognition.model.DeleteStreamProcessorRequest;
+import software.amazon.awssdk.services.rekognition.model.DeleteStreamProcessorResponse;
+import software.amazon.awssdk.services.rekognition.model.DescribeStreamProcessorRequest;
+import software.amazon.awssdk.services.rekognition.model.DescribeStreamProcessorResponse;
+import software.amazon.awssdk.services.rekognition.model.FaceSearchSettings;
+import software.amazon.awssdk.services.rekognition.model.KinesisDataStream;
+import software.amazon.awssdk.services.rekognition.model.KinesisVideoStream;
+import software.amazon.awssdk.services.rekognition.model.ListStreamProcessorsRequest;
+import software.amazon.awssdk.services.rekognition.model.ListStreamProcessorsResponse;
+import software.amazon.awssdk.services.rekognition.model.ResourceNotFoundException;
+import software.amazon.awssdk.services.rekognition.model.StartStreamProcessorRequest;
+import software.amazon.awssdk.services.rekognition.model.StartStreamProcessorResponse;
+import software.amazon.awssdk.services.rekognition.model.StopStreamProcessorRequest;
+import software.amazon.awssdk.services.rekognition.model.StopStreamProcessorResponse;
+import software.amazon.awssdk.services.rekognition.model.StreamProcessor;
+import software.amazon.awssdk.services.rekognition.model.StreamProcessorInput;
+import software.amazon.awssdk.services.rekognition.model.StreamProcessorOutput;
+import software.amazon.awssdk.services.rekognition.model.StreamProcessorSettings;
+import software.amazon.awssdk.services.rekognition.model.StreamProcessorStatus;
 
 /**
  * Rekognition Stream Processor client class which acts as a wrapper for invoking corresponding Rekognition APIs.
@@ -55,9 +54,9 @@ public class RekognitionStreamProcessor {
     private String collectionId;
     private float matchThreshold;
     private String region;
-    private AmazonRekognition rekognitionClient;
+    private RekognitionClient rekognitionClient;
 
-    private RekognitionStreamProcessor(final Regions regions, final AWSCredentialsProvider provider,
+    private RekognitionStreamProcessor(final Region region, final AwsCredentialsProvider provider,
                                        final RekognitionInput rekognitionInput) {
         this.streamProcessorName = rekognitionInput.getStreamingProcessorName();
         this.kinesisVideoStreamArn = rekognitionInput.getKinesisVideoStreamArn();
@@ -66,16 +65,15 @@ public class RekognitionStreamProcessor {
         this.collectionId = rekognitionInput.getFaceCollectionId();
         this.matchThreshold = rekognitionInput.getMatchThreshold();
 
-        rekognitionClient = AmazonRekognitionClientBuilder
-                .standard()
-                .withRegion(regions)
-                .withCredentials(provider)
+        rekognitionClient = RekognitionClient.builder()
+                .region(region)
+                .credentialsProvider(provider)
                 .build();
     }
 
-    public static RekognitionStreamProcessor create(final Regions regions, final AWSCredentialsProvider provider,
+    public static RekognitionStreamProcessor create(final Region region, final AwsCredentialsProvider provider,
                                                     final RekognitionInput rekognitionInput) {
-        return new RekognitionStreamProcessor(regions, provider, rekognitionInput);
+        return new RekognitionStreamProcessor(region, provider, rekognitionInput);
     }
 
     /**
@@ -85,8 +83,8 @@ public class RekognitionStreamProcessor {
     public void process() {
         // Creates a stream processor if it doesn't already exist and start.
         try {
-            final DescribeStreamProcessorResult result = describeStreamProcessor();
-            if (!result.getStatus().equals(StreamProcessorStatus.RUNNING.toString())) {
+            final DescribeStreamProcessorResponse response = describeStreamProcessor();
+            if (!response.status().equals(StreamProcessorStatus.RUNNING)) {
                 startStreamProcessor();
             }
         } catch (final ResourceNotFoundException e) {
@@ -99,77 +97,85 @@ public class RekognitionStreamProcessor {
         describeStreamProcessor();
     }
 
-    public CreateStreamProcessorResult createStreamProcessor() {
-        final KinesisVideoStream kinesisVideoStream = new KinesisVideoStream()
-                .withArn(kinesisVideoStreamArn);
-        final StreamProcessorInput streamProcessorInput = new StreamProcessorInput()
-                .withKinesisVideoStream(kinesisVideoStream);
-        final KinesisDataStream kinesisDataStream = new KinesisDataStream()
-                .withArn(kinesisDataStreamArn);
-        final StreamProcessorOutput streamProcessorOutput = new StreamProcessorOutput()
-                .withKinesisDataStream(kinesisDataStream);
-        final FaceSearchSettings faceSearchSettings = new FaceSearchSettings()
-                .withCollectionId(collectionId)
-                .withFaceMatchThreshold(matchThreshold);
-        final StreamProcessorSettings streamProcessorSettings = new StreamProcessorSettings()
-                .withFaceSearch(faceSearchSettings);
+    public CreateStreamProcessorResponse createStreamProcessor() {
+        final KinesisVideoStream kinesisVideoStream = KinesisVideoStream.builder()
+                .arn(kinesisVideoStreamArn)
+                .build();
+        final StreamProcessorInput streamProcessorInput = StreamProcessorInput.builder()
+                .kinesisVideoStream(kinesisVideoStream)
+                .build();
+        final KinesisDataStream kinesisDataStream = KinesisDataStream.builder()
+                .arn(kinesisDataStreamArn)
+                .build();
+        final StreamProcessorOutput streamProcessorOutput = StreamProcessorOutput.builder()
+                .kinesisDataStream(kinesisDataStream)
+                .build();
+        final FaceSearchSettings faceSearchSettings = FaceSearchSettings.builder()
+                .collectionId(collectionId)
+                .faceMatchThreshold(matchThreshold)
+                .build();
+        final StreamProcessorSettings streamProcessorSettings = StreamProcessorSettings.builder()
+                .faceSearch(faceSearchSettings)
+                .build();
 
-        final CreateStreamProcessorResult createStreamProcessorResult =
-                rekognitionClient.createStreamProcessor(new CreateStreamProcessorRequest()
-                        .withInput(streamProcessorInput)
-                        .withOutput(streamProcessorOutput)
-                        .withSettings(streamProcessorSettings)
-                        .withRoleArn(roleArn)
-                        .withName(streamProcessorName));
-        log.info("StreamProcessorArn : {} ", createStreamProcessorResult.getStreamProcessorArn());
-        return createStreamProcessorResult;
+        final CreateStreamProcessorResponse createStreamProcessorResponse =
+                rekognitionClient.createStreamProcessor(CreateStreamProcessorRequest.builder()
+                        .input(streamProcessorInput)
+                        .output(streamProcessorOutput)
+                        .settings(streamProcessorSettings)
+                        .roleArn(roleArn)
+                        .name(streamProcessorName)
+                        .build());
+        log.info("StreamProcessorArn : {} ", createStreamProcessorResponse.streamProcessorArn());
+        return createStreamProcessorResponse;
     }
 
-    public StartStreamProcessorResult startStreamProcessor() {
-        final StartStreamProcessorResult startStreamProcessorResult =
-                rekognitionClient.startStreamProcessor(new StartStreamProcessorRequest().withName(streamProcessorName));
-        log.info("SdkResponseMetadata : {} ", startStreamProcessorResult.getSdkResponseMetadata());
-        return startStreamProcessorResult;
+    public StartStreamProcessorResponse startStreamProcessor() {
+        final StartStreamProcessorResponse startStreamProcessorResponse =
+                rekognitionClient.startStreamProcessor(StartStreamProcessorRequest.builder().name(streamProcessorName).build());
+        log.info("SdkResponseMetadata : {} ", startStreamProcessorResponse.responseMetadata());
+        return startStreamProcessorResponse;
     }
 
-    public StopStreamProcessorResult stopStreamProcessor() {
-        final StopStreamProcessorResult stopStreamProcessorResult =
-                rekognitionClient.stopStreamProcessor(new StopStreamProcessorRequest().withName(streamProcessorName));
-        log.info("SdkResponseMetadata : {} ", stopStreamProcessorResult.getSdkResponseMetadata());
-        return stopStreamProcessorResult;
+    public StopStreamProcessorResponse stopStreamProcessor() {
+        final StopStreamProcessorResponse stopStreamProcessorResponse =
+                rekognitionClient.stopStreamProcessor(StopStreamProcessorRequest.builder().name(streamProcessorName).build());
+        log.info("SdkResponseMetadata : {} ", stopStreamProcessorResponse.responseMetadata());
+        return stopStreamProcessorResponse;
     }
 
-    public DeleteStreamProcessorResult deleteStreamProcessor() {
-        final DeleteStreamProcessorResult deleteStreamProcessorResult = rekognitionClient
-                .deleteStreamProcessor(new DeleteStreamProcessorRequest().withName(streamProcessorName));
-        log.info("SdkResponseMetadata : {} ", deleteStreamProcessorResult.getSdkResponseMetadata());
+    public DeleteStreamProcessorResponse deleteStreamProcessor() {
+        final DeleteStreamProcessorResponse deleteStreamProcessorResult = rekognitionClient
+                .deleteStreamProcessor(DeleteStreamProcessorRequest.builder().name(streamProcessorName).build());
+        log.info("SdkResponseMetadata : {} ", deleteStreamProcessorResult.responseMetadata());
         return deleteStreamProcessorResult;
     }
 
-    public DescribeStreamProcessorResult describeStreamProcessor() {
-        final DescribeStreamProcessorResult describeStreamProcessorResult = rekognitionClient
-                .describeStreamProcessor(new DescribeStreamProcessorRequest().withName(streamProcessorName));
-        log.info("Arn : {}", describeStreamProcessorResult.getStreamProcessorArn());
+    public DescribeStreamProcessorResponse describeStreamProcessor() {
+        final DescribeStreamProcessorResponse describeStreamProcessorResponse = rekognitionClient
+                .describeStreamProcessor(DescribeStreamProcessorRequest.builder().name(streamProcessorName).build());
+        //                .describeStreamProcessor(new DescribeStreamProcessorRequest().withName(streamProcessorName));
+        log.info("Arn : {}", describeStreamProcessorResponse.streamProcessorArn());
         log.info("Input kinesisVideo stream : {} ",
-                describeStreamProcessorResult.getInput().getKinesisVideoStream().getArn());
+                describeStreamProcessorResponse.input().kinesisVideoStream().arn());
         log.info("Output kinesisData stream {} ",
-                describeStreamProcessorResult.getOutput().getKinesisDataStream().getArn());
-        log.info("RoleArn {} ", describeStreamProcessorResult.getRoleArn());
+                describeStreamProcessorResponse.output().kinesisDataStream().arn());
+        log.info("RoleArn {} ", describeStreamProcessorResponse.roleArn());
         log.info(
-                "CollectionId {} ", describeStreamProcessorResult.getSettings().getFaceSearch().getCollectionId());
-        log.info("Status {} ", describeStreamProcessorResult.getStatus());
-        log.info("Status message {} ", describeStreamProcessorResult.getStatusMessage());
-        log.info("Creation timestamp {} ", describeStreamProcessorResult.getCreationTimestamp());
-        log.info("Last update timestamp {} ", describeStreamProcessorResult.getLastUpdateTimestamp());
-        return describeStreamProcessorResult;
+                "CollectionId {} ", describeStreamProcessorResponse.settings().faceSearch().collectionId());
+        log.info("Status {} ", describeStreamProcessorResponse.status());
+        log.info("Status message {} ", describeStreamProcessorResponse.statusMessage());
+        log.info("Creation timestamp {} ", describeStreamProcessorResponse.creationTimestamp());
+        log.info("Last update timestamp {} ", describeStreamProcessorResponse.lastUpdateTimestamp());
+        return describeStreamProcessorResponse;
     }
 
-    public ListStreamProcessorsResult listStreamProcessor() {
-        final ListStreamProcessorsResult listStreamProcessorsResult =
-                rekognitionClient.listStreamProcessors(new ListStreamProcessorsRequest().withMaxResults(100));
-        for (final StreamProcessor streamProcessor : listStreamProcessorsResult.getStreamProcessors()) {
-            log.info("StreamProcessor name {} ", streamProcessor.getName());
-            log.info("Status {} ", streamProcessor.getStatus());
+    public ListStreamProcessorsResponse listStreamProcessor() {
+        final ListStreamProcessorsResponse listStreamProcessorsResult =
+                rekognitionClient.listStreamProcessors(ListStreamProcessorsRequest.builder().maxResults(100).build());
+        for (final StreamProcessor streamProcessor : listStreamProcessorsResult.streamProcessors()) {
+            log.info("StreamProcessor name {} ", streamProcessor.name());
+            log.info("Status {} ", streamProcessor.status());
         }
         return listStreamProcessorsResult;
     }

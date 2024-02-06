@@ -13,34 +13,38 @@ See the License for the specific language governing permissions and limitations 
 */
 package com.amazonaws.kinesisvideo.parser.utilities;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
-import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
-import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.AttributeValueUpdate;
-import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
-import com.amazonaws.services.dynamodbv2.model.CreateTableResult;
-import com.amazonaws.services.dynamodbv2.model.DescribeTableRequest;
-import com.amazonaws.services.dynamodbv2.model.GetItemRequest;
-import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
-import com.amazonaws.services.dynamodbv2.model.KeyType;
-import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
-import com.amazonaws.services.dynamodbv2.model.PutItemRequest;
-import com.amazonaws.services.dynamodbv2.model.PutItemResult;
-import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
-import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
-import com.amazonaws.services.dynamodbv2.model.TableDescription;
-import com.amazonaws.services.dynamodbv2.model.UpdateItemRequest;
-import com.amazonaws.services.dynamodbv2.model.UpdateItemResult;
-import lombok.extern.slf4j.Slf4j;
+import com.amazonaws.SdkClientException;
 
+import lombok.extern.slf4j.Slf4j;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.http.crt.AwsCrtAsyncHttpClient;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValueUpdate;
+import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.CreateTableResponse;
+import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
+import software.amazon.awssdk.services.dynamodb.model.KeyType;
+import software.amazon.awssdk.services.dynamodb.model.ProvisionedThroughput;
+import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.PutItemResponse;
+import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
+import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
+import software.amazon.awssdk.services.dynamodb.model.TableDescription;
+import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.UpdateItemResponse;
+import software.amazon.awssdk.utils.ImmutableMap;
+
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 /**
  * DynamoDB helper class to access FragmentCheckpoint table. Used by the KinesisVideoRekognitionLambdaExample to save
@@ -55,18 +59,17 @@ public class DynamoDBHelper {
     private static final String SERVER_TIME = "ServerTime";
     private static final String PRODUCER_TIME = "ProducerTime";
     private static final String UPDATED_TIME = "UpdatedTime";
-    private final AmazonDynamoDB ddbClient;
+    private final DynamoDbAsyncClient ddbClient;
 
-    public DynamoDBHelper(final Regions region, final AWSCredentialsProvider credentialsProvider) {
-        final ClientConfiguration clientConfiguration = new ClientConfiguration()
-                .withConnectionTimeout(ClientConfiguration.DEFAULT_CONNECTION_TIMEOUT)
-                .withRetryPolicy(ClientConfiguration.DEFAULT_RETRY_POLICY)
-                .withRequestTimeout(ClientConfiguration.DEFAULT_REQUEST_TIMEOUT)
-                .withSocketTimeout(ClientConfiguration.DEFAULT_SOCKET_TIMEOUT);
-        ddbClient = AmazonDynamoDBClient.builder()
-                .withClientConfiguration(clientConfiguration)
-                .withCredentials(credentialsProvider)
-                .withRegion(region)
+    public DynamoDBHelper(final Region region, final AwsCredentialsProvider credentialsProvider) {
+
+        ddbClient = DynamoDbAsyncClient.builder()
+                .httpClientBuilder(AwsCrtAsyncHttpClient
+                        .builder()
+                        .connectionTimeout(Duration.ofSeconds(3))
+                        .maxConcurrency(100))
+                .credentialsProvider(credentialsProvider)
+                .region(region)
                 .build();
     }
 
@@ -77,44 +80,47 @@ public class DynamoDBHelper {
         // Check if table exists
         if (!checkIfTableExists()) {
             log.info("Creating table : {}", TABLE_NAME);
-            final CreateTableRequest request = new CreateTableRequest() {{
-                setAttributeDefinitions(
-                        Collections.singletonList(
-                                new AttributeDefinition(
-                                        KVS_STREAM_NAME,
-                                        ScalarAttributeType.S)));
-                setKeySchema(
-                        Collections.singletonList(
-                                new KeySchemaElement(
-                                        KVS_STREAM_NAME,
-                                        KeyType.HASH)));
-                setProvisionedThroughput(
-                        new ProvisionedThroughput(1000L, 1000L));
-                setTableName(TABLE_NAME);
-            }};
+
+            final CreateTableRequest createTableRequest = CreateTableRequest.builder()
+                    .tableName(TABLE_NAME)
+                    .attributeDefinitions(AttributeDefinition.builder()
+                            .attributeName(KVS_STREAM_NAME)
+                            .attributeType(ScalarAttributeType.S)
+                            .build())
+                    .keySchema(KeySchemaElement.builder()
+                            .attributeName(KVS_STREAM_NAME)
+                            .keyType(KeyType.HASH)
+                            .build())
+                    .provisionedThroughput(ProvisionedThroughput.builder()
+                            .readCapacityUnits(1000L)
+                            .writeCapacityUnits(1000L)
+                            .build())
+                    .build();
 
             try {
-                final CreateTableResult result = ddbClient.createTable(request);
-                log.info("Table created : {}", result.getTableDescription());
-            } catch (final AmazonDynamoDBException e) {
+                final CreateTableResponse createTableResponse = ddbClient.createTable(createTableRequest).get();
+                log.info("Table created : {}", createTableResponse.tableDescription());
+            } catch (final InterruptedException | ExecutionException e) {
                 log.error("Error creating DDB table {}...", TABLE_NAME, e);
-                throw e;
+                throw new RuntimeException(e);
             }
         }
     }
 
     private boolean checkIfTableExists() {
         try {
-            final DescribeTableRequest request = new DescribeTableRequest() {{
-                setTableName(TABLE_NAME);
-            }};
+
+            final DescribeTableRequest describeTableRequest = DescribeTableRequest.builder()
+                    .tableName(TABLE_NAME).build();
+
             final TableDescription table_info =
-                    ddbClient.describeTable(request).getTable();
-            log.info("Table exists : {}", table_info.getTableName());
+                    ddbClient.describeTable(describeTableRequest).get().table();
+
+            log.info("Table exists : {}", table_info.tableName());
             return true;
         } catch (final ResourceNotFoundException e) {
             log.warn("{} table doesn't exist !", TABLE_NAME);
-        } catch (final AmazonDynamoDBException e) {
+        } catch (final InterruptedException | ExecutionException | SdkException | SdkClientException e) {
             log.warn("Error while describing table!", e);
         }
         return false;
@@ -128,15 +134,15 @@ public class DynamoDBHelper {
      */
     public Map<String, AttributeValue> getItem(final String streamName) {
         try {
-            final Map<String,AttributeValue> key = new HashMap<>();
-            key.put(KVS_STREAM_NAME, new AttributeValue().withS(streamName));
-            final GetItemRequest getItemRequest = new GetItemRequest() {{
-                setTableName(TABLE_NAME);
-                setKey(key);
-            }};
+            final Map<String,AttributeValue> key = Collections.singletonMap(KVS_STREAM_NAME, AttributeValue.builder().s(streamName).build());
 
-            return ddbClient.getItem(getItemRequest).getItem();
-        } catch (final AmazonDynamoDBException e) {
+            final GetItemRequest getItemRequest = GetItemRequest.builder()
+                    .tableName(TABLE_NAME)
+                    .key(key)
+                    .build();
+
+            return ddbClient.getItem(getItemRequest).get().item();
+        } catch (final InterruptedException | ExecutionException | SdkException | SdkClientException e) {
             log.warn("Error while getting item from table!", e);
         }
         return null;
@@ -154,20 +160,20 @@ public class DynamoDBHelper {
     public void putItem(final String streamName, final String fragmentNumber,
                          final Long producerTime, final Long serverTime, final Long updatedTime) {
         try {
-            final Map<String,AttributeValue> item = new HashMap<>();
-            item.put(KVS_STREAM_NAME, new AttributeValue().withS(streamName));
-            item.put(FRAGMENT_NUMBER, new AttributeValue().withS(fragmentNumber));
-            item.put(UPDATED_TIME, new AttributeValue().withN(updatedTime.toString()));
-            item.put(PRODUCER_TIME, new AttributeValue().withN(producerTime.toString()));
-            item.put(SERVER_TIME, new AttributeValue().withN(serverTime.toString()));
-            final PutItemRequest putItemRequest = new PutItemRequest()
-            {{
-                setTableName(TABLE_NAME);
-                setItem(item);
-            }};
 
-            final PutItemResult result = ddbClient.putItem(putItemRequest);
-            log.info("Item saved : ", result.getAttributes());
+            final Map<String, AttributeValue> item = ImmutableMap.of(KVS_STREAM_NAME, AttributeValue.builder().s(streamName).build(),
+            FRAGMENT_NUMBER, AttributeValue.builder().s(fragmentNumber).build(),
+            UPDATED_TIME, AttributeValue.builder().n(updatedTime.toString()).build(),
+            PRODUCER_TIME, AttributeValue.builder().n(producerTime.toString()).build(),
+            SERVER_TIME, AttributeValue.builder().n(serverTime.toString()).build());
+
+            final PutItemRequest putItemRequest = PutItemRequest.builder()
+                    .tableName(TABLE_NAME)
+                    .item(item)
+                    .build();
+
+            final PutItemResponse putItemResponse = ddbClient.putItem(putItemRequest).get();
+            log.info("Item saved : {}", putItemResponse.attributes());
         } catch (final Exception e) {
             log.warn("Error while putting item into the table!", e);
         }
@@ -185,26 +191,23 @@ public class DynamoDBHelper {
     public void updateItem(final String streamName, final String fragmentNumber,
                             final Long producerTime, final Long serverTime, final Long updatedTime) {
         try {
-            final Map<String,AttributeValue> key = new HashMap<>();
-            key.put(KVS_STREAM_NAME, new AttributeValue().withS(streamName));
-            final Map<String,AttributeValueUpdate> updates = new HashMap<>();
-            updates.put(FRAGMENT_NUMBER, new AttributeValueUpdate().withValue(
-                    new AttributeValue().withS(fragmentNumber)));
-            updates.put(UPDATED_TIME, new AttributeValueUpdate().withValue(
-                    new AttributeValue().withN(updatedTime.toString())));
-            updates.put(PRODUCER_TIME, new AttributeValueUpdate().withValue(
-                    new AttributeValue().withN(producerTime.toString())));
-            updates.put(SERVER_TIME, new AttributeValueUpdate().withValue(
-                    new AttributeValue().withN(serverTime.toString())));
-            final UpdateItemRequest updateItemRequest = new UpdateItemRequest()
-            {{
-                setTableName(TABLE_NAME);
-                setKey(key);
-                setAttributeUpdates(updates);
-            }};
 
-            final UpdateItemResult result = ddbClient.updateItem(updateItemRequest);
-            log.info("Item updated : {}", result.getAttributes());
+            final Map<String,AttributeValue> key = Collections.singletonMap(KVS_STREAM_NAME, AttributeValue.builder().s(streamName).build());
+
+            final Map<String, AttributeValueUpdate> updates = ImmutableMap.of(FRAGMENT_NUMBER, AttributeValueUpdate.builder().value(AttributeValue.builder().s(fragmentNumber).build()).build(),
+                    UPDATED_TIME, AttributeValueUpdate.builder().value(AttributeValue.builder().n(updatedTime.toString()).build()).build(),
+                    PRODUCER_TIME, AttributeValueUpdate.builder().value(AttributeValue.builder().n(producerTime.toString()).build()).build(),
+                    SERVER_TIME, AttributeValueUpdate.builder().value(AttributeValue.builder().n(serverTime.toString()).build()).build());
+
+
+            final UpdateItemRequest updateItemRequest = UpdateItemRequest.builder()
+                    .tableName(TABLE_NAME)
+                    .key(key)
+                    .attributeUpdates(updates)
+                    .build();
+
+            final UpdateItemResponse updateItemResponse = ddbClient.updateItem(updateItemRequest).get();
+            log.info("Item updated : {}", updateItemResponse.attributes());
         } catch (final Exception e) {
             log.warn("Error while updating item in the table!", e);
         }

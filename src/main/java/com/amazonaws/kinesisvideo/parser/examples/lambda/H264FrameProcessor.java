@@ -32,6 +32,7 @@ import com.amazonaws.kinesisvideo.producer.StreamInfo;
 import com.amazonaws.regions.Regions;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
 import java.awt.image.BufferedImage;
 import java.util.List;
@@ -54,7 +55,7 @@ public class H264FrameProcessor implements FrameVisitor.FrameProcessor {
     private KVSMediaSource KVSMediaSource;
     private boolean isKVSProducerInitialized = false;
     private boolean isEncoderInitialized = false;
-    private final AWSCredentialsProvider credentialsProvider;
+    private final AwsCredentialsProvider credentialsProvider;
     private final String outputKvsStreamName;
     @Setter
     private List<RekognizedOutput> rekognizedOutputs;
@@ -65,7 +66,7 @@ public class H264FrameProcessor implements FrameVisitor.FrameProcessor {
     private int currentHeight = 0;
     private long keyFrameTimecode;
 
-    private H264FrameProcessor(final AWSCredentialsProvider credentialsProvider,
+    private H264FrameProcessor(final AwsCredentialsProvider credentialsProvider,
                                final String outputKvsStreamName,
                                final Regions regionName) {
         this.boundingBoxImagePanel = new BoundingBoxImagePanel();

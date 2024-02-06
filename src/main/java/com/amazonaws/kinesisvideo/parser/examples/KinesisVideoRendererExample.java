@@ -99,7 +99,7 @@ public class KinesisVideoRendererExample extends KinesisVideoCommon {
                         getCredentialsProvider(),
                         getStreamName(),
                         inputStream,
-                        streamOps.amazonKinesisVideo);
+                        streamOps.kinesisVideoAsyncClient);
                 executorService.submit(putMediaWorker);
             }
 
@@ -108,7 +108,7 @@ public class KinesisVideoRendererExample extends KinesisVideoCommon {
                     getCredentialsProvider(),
                     getStreamName(),
                     new StartSelector().withStartSelectorType(StartSelectorType.NOW),
-                    streamOps.amazonKinesisVideo,
+                    streamOps.kinesisVideoAsyncClient,
                     getMediaProcessingArgumentsLocal.getFrameVisitor());
             executorService.submit(getMediaWorker);
 

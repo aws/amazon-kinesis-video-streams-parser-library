@@ -13,19 +13,18 @@ See the License for the specific language governing permissions and limitations 
 */
 package com.amazonaws.kinesisvideo.parser.rekognition.processor;
 
-import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
-import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.kinesisvideo.parser.rekognition.pojo.RekognitionInput;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.rekognition.model.CreateStreamProcessorResult;
-import com.amazonaws.services.rekognition.model.DescribeStreamProcessorResult;
-import com.amazonaws.services.rekognition.model.ListStreamProcessorsResult;
-import com.amazonaws.services.rekognition.model.StartStreamProcessorResult;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.rekognition.model.CreateStreamProcessorResponse;
+import software.amazon.awssdk.services.rekognition.model.DescribeStreamProcessorResponse;
+import software.amazon.awssdk.services.rekognition.model.ListStreamProcessorsResponse;
+import software.amazon.awssdk.services.rekognition.model.StartStreamProcessorResponse;
 
 @Slf4j
 @Ignore // Used for controlling rekognition stream processor used in Rekognition integration examples.
@@ -45,30 +44,30 @@ public class RekognitionStreamProcessorTest {
                 .iamRoleArn("<iam-role>")
                 .matchThreshold(0.08f)
                 .build();
-        streamProcessor = RekognitionStreamProcessor.create(Regions.US_WEST_2, new ProfileCredentialsProvider(), rekognitionInput);
+        streamProcessor = RekognitionStreamProcessor.create(Region.US_WEST_2, ProfileCredentialsProvider.create(), rekognitionInput);
     }
 
     @Test
     public void createStreamProcessor() {
-        final CreateStreamProcessorResult result = streamProcessor.createStreamProcessor();
-        Assert.assertNotNull(result.getStreamProcessorArn());
+        final CreateStreamProcessorResponse result = streamProcessor.createStreamProcessor();
+        Assert.assertNotNull(result.streamProcessorArn());
     }
 
     @Test
     public void startStreamProcessor() {
-        final StartStreamProcessorResult result = streamProcessor.startStreamProcessor();
+        final StartStreamProcessorResponse result = streamProcessor.startStreamProcessor();
         log.info("Result : {}", result);
     }
 
     @Test
     public void describeStreamProcessor() {
-        final DescribeStreamProcessorResult result = streamProcessor.describeStreamProcessor();
-        log.info("Status for stream processor : {}", result.getStatus());
+        final DescribeStreamProcessorResponse result = streamProcessor.describeStreamProcessor();
+        log.info("Status for stream processor : {}", result.status());
     }
 
     @Test
     public void listStreamProcessor() {
-        final ListStreamProcessorsResult result = streamProcessor.listStreamProcessor();
+        final ListStreamProcessorsResponse result = streamProcessor.listStreamProcessor();
         log.info("List StreamProcessors : {}", result);
     }
 
