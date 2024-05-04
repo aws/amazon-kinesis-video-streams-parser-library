@@ -94,56 +94,56 @@ public class EBMLParser {
                 if (log.isDebugEnabled()) {
                     log.debug("Current element read state {}", currentElement.currentElementReadState);
                 }
-                switch (currentElement.currentElementReadState) {
-                    case NEW:
-                        //check if any master elements are done because their end offset has been reached.
-                        removeMasterElementsBasedOnSizeEnd();
+                ElementReadState curElementReadState = currentElement.currentElementReadState;
+                if (curElementReadState == ElementReadState.NEW)
+                {
+                    //check if any master elements are done because their end offset has been reached.
+                    removeMasterElementsBasedOnSizeEnd();
 
-                        currentElement.readId(callState);
-                        break;
-                    case ID_DONE:
-                        currentElement.readSize(callState);
-                        break;
-                    case SIZE_DONE:
-                        currentElement.updateTypeInfo(typeInfoProvider);
-                        //check if any master elements are done because an equal or higher level
-                        //element is reached.
-                        removeMasterElementsBasedOnLevel();
+                    currentElement.readId(callState);
 
+                } else if (curElementReadState == ElementReadState.ID_DONE) {
+                    currentElement.readSize(callState);
 
-                        //Call onstartForElement();
-                        if (currentElement.isKnownType()) {
-                            log.debug("Invoking onStartElement for current element {}", currentElement);
-                            callbacks.onStartElement(currentElement.getMetadata(),
-                                    currentElement.getDataSize(),
-                                    replayIdAndSizeBuffer.getByteBuffer(),
-                                    this::currentElementPath);
-                        }
+                } else if (curElementReadState == ElementReadState.SIZE_DONE) {
+                    currentElement.updateTypeInfo(typeInfoProvider);
+                    //check if any master elements are done because an equal or higher level
+                    //element is reached.
+                    removeMasterElementsBasedOnLevel();
 
-                        startReadingContentBasedOnType();
-                        break;
-                    case CONTENT_READING:
-                        Validate.isTrue(currentElement.isKnownType(),
-                                "We should read only from elements with known types");
-                        currentElement.readContent(callState, callState, callbacks, maxContentBytesInOnePass);
-                        break;
-                    case CONTENT_SKIPPING:
-                        Validate.isTrue(!currentElement.isKnownType(), "We should skip data for unknown elements only");
-                        skipBuffer.rewind();
-                        currentElement.skipContent(callState, callState, skipBuffer);
-                        break;
-                    case FINISHED:
-                        invokeOnEndElementCallback(currentElement);
-                        //check if any master elements are done because their end offset has been reached.
-                        removeMasterElementsBasedOnSizeEnd();
+                    //Call onstartForElement();
+                    if (currentElement.isKnownType()) {
+                        log.debug("Invoking onStartElement for current element {}", currentElement);
+                        callbacks.onStartElement(currentElement.getMetadata(),
+                                currentElement.getDataSize(),
+                                replayIdAndSizeBuffer.getByteBuffer(),
+                                this::currentElementPath);
+                    }
 
+                    startReadingContentBasedOnType();
 
-                        createNewCurrentElementInfo();
-                        break;
-                    default:
-                        throw new IllegalArgumentException("Unexpected ElementReadState");
+                } else if (curElementReadState == ElementReadState.CONTENT_READING) {
+                    Validate.isTrue(currentElement.isKnownType(),
+                        "We should read only from elements with known types");
+                    currentElement.readContent(callState, callState, callbacks, maxContentBytesInOnePass);
+
+                } else if (curElementReadState == ElementReadState.CONTENT_SKIPPING) {
+                    Validate.isTrue(!currentElement.isKnownType(), "We should skip data for unknown elements only");
+                    skipBuffer.rewind();
+                    currentElement.skipContent(callState, callState, skipBuffer);
+
+                } else if (curElementReadState == ElementReadState.FINISHED) {
+                    invokeOnEndElementCallback(currentElement);
+                    //check if any master elements are done because their end offset has been reached.
+                    removeMasterElementsBasedOnSizeEnd();
+
+                    createNewCurrentElementInfo();
+
+                } else {
+                    throw new IllegalArgumentException("Unexpected ElementReadState");
                 }
             }
+            
             log.debug("Stopping parsing");
             if (endOfStream) {
                 closeParser();

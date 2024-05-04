@@ -210,61 +210,54 @@ public class OutputSegmentMerger extends CompositeMkvElementVisitor {
         @Override
         public void visit(final MkvStartMasterElement startMasterElement) throws MkvElementVisitException {
             try {
-                switch (state) {
-                    case NEW:
-                        //Only the ebml header is expected in the new state
-                        Validate.isTrue(MkvTypeInfos.EBML.equals(startMasterElement.getElementMetaData().getTypeInfo()),
-                                "EBML should be the only expected element type when a new MKV stream is expected");
-                        log.info("Detected start of EBML element, transitioning from {} to BUFFERING", state);
-                        //Change state to buffering and bufferAndCollect this element.
-                        state = MergeState.BUFFERING_SEGMENT;
-                        bufferAndCollect(startMasterElement);
-                        break;
-                    case BUFFERING_SEGMENT:
-                        //if it is the cluster start element check if the buffered elements should be emitted and
-                        // then change state to emitting, emit this the element as well.
-                        final EBMLTypeInfo startElementTypeInfo = startMasterElement.getElementMetaData().getTypeInfo();
-                        if (MkvTypeInfos.CLUSTER.equals(startElementTypeInfo) || MkvTypeInfos.TAGS.equals(
-                                startElementTypeInfo)) {
-                            final boolean shouldEmitSegment = shouldEmitBufferedSegmentData();
+                if (state == MergeState.NEW) {
+                    // Only the ebml header is expected in the new state
+                    Validate.isTrue(MkvTypeInfos.EBML.equals(startMasterElement.getElementMetaData().getTypeInfo()),
+                            "EBML should be the only expected element type when a new MKV stream is expected");
+                    log.info("Detected start of EBML element, transitioning from {} to BUFFERING", state);
+                    // Change state to buffering and bufferAndCollect this element.
+                    state = MergeState.BUFFERING_SEGMENT;
+                    bufferAndCollect(startMasterElement);
+                } else if (state == MergeState.BUFFERING_SEGMENT) {
+                    // If it is the cluster start element check if the buffered elements should be
+                    // emitted and
+                    // then change state to emitting, emit this the element as well.
+                    final EBMLTypeInfo startElementTypeInfo = startMasterElement.getElementMetaData().getTypeInfo();
+                    if (MkvTypeInfos.CLUSTER.equals(startElementTypeInfo) || MkvTypeInfos.TAGS.equals(
+                            startElementTypeInfo)) {
+                        final boolean shouldEmitSegment = shouldEmitBufferedSegmentData();
 
-                            if (shouldEmitSegment) {
-                                if (configuration.stopAtFirstNonMatchingSegment && emittedSegments >= 1) {
-                                    log.info("Detected start of element {} transitioning from {} to DONE",
-                                            startElementTypeInfo,
-                                            state);
-                                    state = MergeState.DONE;
-                                } else {
-                                    emitBufferedSegmentData(true);
-                                    resetChannels();
-                                    log.info("Detected start of element {} transitioning from {} to EMITTING",
-                                            startElementTypeInfo,
-                                            state);
-                                    state = EMITTING;
-                                    emit(startMasterElement);
-                                }
-                            } else {
-                                log.info("Detected start of element {} transitioning from {} to BUFFERING_CLUSTER_START",
+                        if (shouldEmitSegment) {
+                            if (configuration.stopAtFirstNonMatchingSegment && emittedSegments >= 1) {
+                                log.info("Detected start of element {} transitioning from {} to DONE",
                                         startElementTypeInfo,
                                         state);
-                                state = BUFFERING_CLUSTER_START;
-                                bufferAndCollect(startMasterElement);
+                                state = MergeState.DONE;
+                            } else {
+                                emitBufferedSegmentData(true);
+                                resetChannels();
+                                log.info("Detected start of element {} transitioning from {} to EMITTING",
+                                        startElementTypeInfo,
+                                        state);
+                                state = EMITTING;
+                                emit(startMasterElement);
                             }
                         } else {
+                            log.info("Detected start of element {} transitioning from {} to BUFFERING_CLUSTER_START",
+                                    startElementTypeInfo,
+                                    state);
+                            state = BUFFERING_CLUSTER_START;
                             bufferAndCollect(startMasterElement);
                         }
-                        break;
-                    case BUFFERING_CLUSTER_START:
+                    } else {
                         bufferAndCollect(startMasterElement);
-                        break;
-                    case EMITTING:
-                        emit(startMasterElement);
-                        break;
-                    case DONE:
-                        log.warn("OutputSegmentMerger is already done. It will not process any more elements.");
-                        break;
-
-
+                    }
+                } else if (state == MergeState.BUFFERING_CLUSTER_START) {
+                    bufferAndCollect(startMasterElement);
+                } else if (state == MergeState.EMITTING) {
+                    emit(startMasterElement);
+                } else if (state == MergeState.DONE) {
+                    log.warn("OutputSegmentMerger is already done. It will not process any more elements.");
                 }
             } catch (final IOException ie) {
                 wrapIOException(ie);
@@ -275,7 +268,7 @@ public class OutputSegmentMerger extends CompositeMkvElementVisitor {
         private void wrapIOException(final IOException ie) throws MkvElementVisitException {
             String exceptionMessage = "IOException in merge visitor ";
             if (lastClusterTimecode.isPresent()) {
-                exceptionMessage += "in or immediately after cluster with timecode "+lastClusterTimecode.get();
+                exceptionMessage += "in or immediately after cluster with timecode " + lastClusterTimecode.get();
             } else {
                 exceptionMessage += "in first cluster";
             }
@@ -284,78 +277,65 @@ public class OutputSegmentMerger extends CompositeMkvElementVisitor {
 
         @Override
         public void visit(final MkvEndMasterElement endMasterElement) throws MkvElementVisitException {
-                switch (state) {
-                    case NEW:
-                        Validate.isTrue(false,
-                                "Should not start with an EndMasterElement " + endMasterElement.toString());
-                        break;
-                    case BUFFERING_SEGMENT:
-                    case BUFFERING_CLUSTER_START:
-                        collect(endMasterElement);
-                        break;
-                    case EMITTING:
-                        if (MkvTypeInfos.SEGMENT.equals(endMasterElement.getElementMetaData().getTypeInfo())) {
-                            log.info("Detected end of segment element, transitioning from {} to NEW", state);
-                            state = MergeState.NEW;
-                            resetCollectors();
-                        }
-                        break;
-                    case DONE:
-                        log.warn("OutputSegmentMerger is already done. It will not process any more elements.");
-                        break;
+            if (state == MergeState.NEW) {
+                Validate.isTrue(false,
+                        "Should not start with an EndMasterElement " + endMasterElement.toString());
+            } else if (state == MergeState.BUFFERING_SEGMENT || state == MergeState.BUFFERING_CLUSTER_START) {
+                collect(endMasterElement);
+            } else if (state == MergeState.EMITTING) {
+                if (MkvTypeInfos.SEGMENT.equals(endMasterElement.getElementMetaData().getTypeInfo())) {
+                    log.info("Detected end of segment element, transitioning from {} to NEW", state);
+                    state = MergeState.NEW;
+                    resetCollectors();
                 }
+            } else if (state == MergeState.DONE) {
+                log.warn("OutputSegmentMerger is already done. It will not process any more elements.");
+            }
         }
 
         @Override
         public void visit(final MkvDataElement dataElement) throws MkvElementVisitException {
             try {
-                switch (state) {
-                    case NEW:
-                        Validate.isTrue(false, "Should not start with a data element " + dataElement.toString());
-                        break;
-                    case BUFFERING_SEGMENT:
-                        bufferAndCollect(dataElement);
-                        break;
-                    case BUFFERING_CLUSTER_START:
-                        if (MkvTypeInfos.TIMECODE.equals(dataElement.getElementMetaData().getTypeInfo())) {
-                            final BigInteger currentTimeCode = (BigInteger) dataElement.getValueCopy().getVal();
-                            if (lastClusterTimecode.isPresent()
-                                    && currentTimeCode.compareTo(lastClusterTimecode.get()) <= 0) {
-                                if (configuration.stopAtFirstNonMatchingSegment && emittedSegments >= 1) {
-                                    log.info("Detected time code going back from {} to {}, state from {} to DONE",
-                                            lastClusterTimecode,
-                                            currentTimeCode,
-                                            state);
-                                    state = MergeState.DONE;
-                                } else {
-                                    //emit buffered segment start
-                                    emitBufferedSegmentData(true);
-                                }
+                if (state == MergeState.NEW) {
+                    Validate.isTrue(false, "Should not start with a data element " + dataElement.toString());
+                } else if (state == MergeState.BUFFERING_SEGMENT) {
+                    bufferAndCollect(dataElement);
+                } else if (state == MergeState.BUFFERING_CLUSTER_START) {
+                    if (MkvTypeInfos.TIMECODE.equals(dataElement.getElementMetaData().getTypeInfo())) {
+                        final BigInteger currentTimeCode = (BigInteger) dataElement.getValueCopy().getVal();
+                        if (lastClusterTimecode.isPresent()
+                                && currentTimeCode.compareTo(lastClusterTimecode.get()) <= 0) {
+                            if (configuration.stopAtFirstNonMatchingSegment && emittedSegments >= 1) {
+                                log.info("Detected time code going back from {} to {}, state from {} to DONE",
+                                        lastClusterTimecode,
+                                        currentTimeCode,
+                                        state);
+                                state = MergeState.DONE;
+                            } else {
+                                // emit buffered segment start
+                                emitBufferedSegmentData(true);
                             }
-                            if (!isDone()) {
-                                emitClusterStart();
-                                resetChannels();
-                                state = EMITTING;
-                                emitAdjustedTimeCode(dataElement);
-                            }
-                        } else {
-                            bufferAndCollect(dataElement);
                         }
-                        break;
-                    case EMITTING:
-                        if (MkvTypeInfos.TIMECODE.equals(dataElement.getElementMetaData().getTypeInfo())) {
+                        if (!isDone()) {
+                            emitClusterStart();
+                            resetChannels();
+                            state = EMITTING;
                             emitAdjustedTimeCode(dataElement);
-                        } else if (MkvTypeInfos.SIMPLEBLOCK.equals(dataElement.getElementMetaData().getTypeInfo())) {
-                            emitFrame(dataElement);
-                        } else {
-                            emit(dataElement);
                         }
-                        break;
-                    case DONE:
-                        log.warn("OutputSegmentMerger is already done. It will not process any more elements.");
-                        break;
+                    } else {
+                        bufferAndCollect(dataElement);
+                    }
+                } else if (state == MergeState.EMITTING) {
+                    if (MkvTypeInfos.TIMECODE.equals(dataElement.getElementMetaData().getTypeInfo())) {
+                        emitAdjustedTimeCode(dataElement);
+                    } else if (MkvTypeInfos.SIMPLEBLOCK.equals(dataElement.getElementMetaData().getTypeInfo())) {
+                        emitFrame(dataElement);
+                    } else {
+                        emit(dataElement);
+                    }
+                } else if (state == MergeState.DONE) {
+                    log.warn("OutputSegmentMerger is already done. It will not process any more elements.");
                 }
-
             } catch (final IOException ie) {
                 wrapIOException(ie);
             }
@@ -392,7 +372,7 @@ public class OutputSegmentMerger extends CompositeMkvElementVisitor {
                 // Get frame durations
                 final List<Integer> frameDurations = new ArrayList<>();
                 for (int i = 1; i < clusterFrameTimeCodes.size(); i++) {
-                    frameDurations.add(clusterFrameTimeCodes.get(i) - clusterFrameTimeCodes.get(i -1));
+                    frameDurations.add(clusterFrameTimeCodes.get(i) - clusterFrameTimeCodes.get(i - 1));
                 }
 
                 // Get average duration and add it to the other durations to account for the last frame
@@ -491,17 +471,17 @@ public class OutputSegmentMerger extends CompositeMkvElementVisitor {
     }
 
     private void emit(final MkvStartMasterElement startMasterElement) throws MkvElementVisitException {
-        Validate.isTrue(state == EMITTING, "emitting in wrong state "+state);
+        Validate.isTrue(state == EMITTING, "emitting in wrong state " + state);
         startMasterElement.writeToChannel(outputChannel);
     }
 
     private void emit(final MkvDataElement dataElement) throws MkvElementVisitException {
-        Validate.isTrue(state == EMITTING, "emitting in wrong state "+state);
+        Validate.isTrue(state == EMITTING, "emitting in wrong state " + state);
         dataElement.writeToChannel(outputChannel);
     }
 
     private void collect(final MkvEndMasterElement endMasterElement) throws MkvElementVisitException {
-        //only trigger collectors since endelements do not have any data to buffer.
+        // only trigger collectors since endelements do not have any data to buffer.
         this.sendElementToAllCollectors(endMasterElement);
     }
 
@@ -516,12 +496,12 @@ public class OutputSegmentMerger extends CompositeMkvElementVisitor {
 
         if (shouldEmitSegmentData) {
             final int numBytes = outputChannel.write(ByteBuffer.wrap(bufferingSegmentStream.toByteArray()));
-            log.debug("Wrote buffered header data to output stream {} bytes",numBytes);
+            log.debug("Wrote buffered header data to output stream {} bytes", numBytes);
             emittedSegments++;
         } else {
-            //We can merge the segments, so we dont need to write the buffered headers
+            // We can merge the segments, so we dont need to write the buffered headers
             // However, we still need to introduce a dummy void element to prevent consumers
-            //getting confused by two consecutive elements of the same type.
+            // getting confused by two consecutive elements of the same type.
             VOID_ELEMENT_WITH_SIZE_ONE.rewind();
             outputChannel.write(VOID_ELEMENT_WITH_SIZE_ONE);
         }
