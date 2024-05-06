@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and limitations 
 */
 package com.amazonaws.kinesisvideo.parser.mkv;
 
+import com.amazonaws.kinesisvideo.parser.ebml.EBMLTypeInfo;
 import com.amazonaws.kinesisvideo.parser.ebml.EBMLElementMetaData;
 import com.amazonaws.kinesisvideo.parser.ebml.EBMLUtils;
 import com.amazonaws.kinesisvideo.parser.ebml.MkvTypeInfos;
@@ -41,7 +42,7 @@ import java.util.List;
  * It copies the raw bytes and interprets it based on the type of the MkvDataElement.
  */
 @Getter
-@ToString(callSuper = true, exclude = {"dataBuffer","valueCopy", "idAndSizeRawBytes"})
+@ToString(callSuper = true, exclude = { "dataBuffer", "valueCopy", "idAndSizeRawBytes" })
 @Slf4j
 public class MkvDataElement extends MkvElement {
     private static final int DATE_SIZE = 8;
@@ -78,52 +79,41 @@ public class MkvDataElement extends MkvElement {
     private void createValueByCopyingBytes() {
         dataBuffer.rewind();
         try {
-            switch (elementMetaData.getTypeInfo().getType()) {
-                case INTEGER:
-                    valueCopy = new MkvValue(EBMLUtils.readDataSignedInteger(dataBuffer, dataSize), dataSize);
-                    break;
-                case UINTEGER:
-                    BigInteger unsignedValue =  EBMLUtils.readDataUnsignedInteger(dataBuffer, dataSize);
-                    //We originally failed validation here, but users ran into streams where the
-                    //Track UID was negative. So, we changed this to an error log.
-                    if (unsignedValue.signum() < 0) {
-                        log.error("Uinteger has negative value {} ", unsignedValue);
-                    }
-                    valueCopy = new MkvValue(unsignedValue, dataSize);
-                    break;
-                case FLOAT:
-                    Validate.isTrue(dataSize == Float.BYTES || dataSize == Double.BYTES,
-                            "Invalid size for float type" + dataSize);
-                    if (dataSize == Float.BYTES) {
-                        valueCopy = new MkvValue(dataBuffer.getFloat(), Float.BYTES);
-                    } else {
-                        valueCopy = new MkvValue(dataBuffer.getDouble(), Double.BYTES);
-                    }
-                    break;
-                case STRING:
-                    valueCopy = new MkvValue(StandardCharsets.US_ASCII.decode(dataBuffer).toString(), dataSize);
-                    break;
-                case UTF_8:
-                    valueCopy = new MkvValue(StandardCharsets.UTF_8.decode(dataBuffer).toString(), dataSize);
-                    break;
-                case DATE:
-                    Validate.isTrue(dataSize == DATE_SIZE, "Date element size can only be 8 bytes not " + dataSize);
-                    long dateLongValue = EBMLUtils.readDataSignedInteger(dataBuffer, DATE_SIZE);
-                    valueCopy = new MkvValue(DATE_BASE_INSTANT.plusNanos(dateLongValue),dataSize);
-                    break;
-                case BINARY:
-                    if (elementMetaData.getTypeInfo().equals(MkvTypeInfos.SIMPLEBLOCK)) {
-                        Frame frame = Frame.withCopy(dataBuffer);
-                        valueCopy = new MkvValue(frame, dataSize);
-                    } else {
-                        ByteBuffer buffer = ByteBuffer.allocate((int) dataSize);
-                        dataBuffer.get(buffer.array(), 0, (int) dataSize);
-                        valueCopy = new MkvValue(buffer, dataSize);
-                    }
-                    break;
-                default:
-                    throw new IllegalArgumentException(
-                            "Cannot have value for ebml element type " + elementMetaData.getTypeInfo().getType());
+            EBMLTypeInfo.TYPE elementType = elementMetaData.getTypeInfo().getType();
+            if (elementType == EBMLTypeInfo.TYPE.DATE) {
+                valueCopy = new MkvValue(EBMLUtils.readDataSignedInteger(dataBuffer, DATE_SIZE), dataSize);
+            } else if (elementType == EBMLTypeInfo.TYPE.INTEGER) {
+                valueCopy = new MkvValue(EBMLUtils.readDataSignedInteger(dataBuffer, dataSize), dataSize);
+            } else if (elementType == EBMLTypeInfo.TYPE.UINTEGER) {
+                BigInteger unsignedValue = EBMLUtils.readDataUnsignedInteger(dataBuffer, dataSize);
+                if (unsignedValue.signum() < 0) {
+                    log.error("Uinteger has negative value {} ", unsignedValue);
+                }
+                valueCopy = new MkvValue(unsignedValue, dataSize);
+            } else if (elementType == EBMLTypeInfo.TYPE.FLOAT) {
+                Validate.isTrue(dataSize == Float.BYTES || dataSize == Double.BYTES,
+                        "Invalid size for float type" + dataSize);
+                if (dataSize == Float.BYTES) {
+                    valueCopy = new MkvValue(dataBuffer.getFloat(), Float.BYTES);
+                } else {
+                    valueCopy = new MkvValue(dataBuffer.getDouble(), Double.BYTES);
+                }
+            } else if (elementType == EBMLTypeInfo.TYPE.STRING) {
+                valueCopy = new MkvValue(StandardCharsets.US_ASCII.decode(dataBuffer).toString(), dataSize);
+            } else if (elementType == EBMLTypeInfo.TYPE.UTF_8) {
+                valueCopy = new MkvValue(StandardCharsets.UTF_8.decode(dataBuffer).toString(), dataSize);
+            } else if (elementType == EBMLTypeInfo.TYPE.BINARY) {
+                if (elementMetaData.getTypeInfo().equals(MkvTypeInfos.SIMPLEBLOCK)) {
+                    Frame frame = Frame.withCopy(dataBuffer);
+                    valueCopy = new MkvValue(frame, dataSize);
+                } else {
+                    ByteBuffer buffer = ByteBuffer.allocate((int) dataSize);
+                    dataBuffer.get(buffer.array(), 0, (int) dataSize);
+                    valueCopy = new MkvValue(buffer, dataSize);
+                }
+            } else {
+                throw new IllegalArgumentException(
+                        "Cannot have value for ebml element type " + elementType);
             }
         } finally {
             dataBuffer.rewind();
@@ -161,7 +151,7 @@ public class MkvDataElement extends MkvElement {
     }
 
     public int getDataBufferSize() {
-        if (dataBuffer == null ) {
+        if (dataBuffer == null) {
             return 0;
         }
         return dataBuffer.limit();

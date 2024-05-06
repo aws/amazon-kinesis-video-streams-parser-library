@@ -133,48 +133,41 @@ public class FragmentMetadataVisitor extends CompositeMkvElementVisitor {
 
         @Override
         public void visit(MkvStartMasterElement startMasterElement) throws MkvElementVisitException {
-            switch (state) {
-                case NEW:
-                    if (MkvTypeInfos.SEGMENT.equals(startMasterElement.getElementMetaData().getTypeInfo())) {
-                        log.debug("Segment start {} changing state to PRE_CLUSTER", startMasterElement);
-                        resetCollectedData();
-                        state = State.PRE_CLUSTER;
-                    }
-                    break;
-                case PRE_CLUSTER:
-                    if (MkvTypeInfos.CLUSTER.equals(startMasterElement.getElementMetaData().getTypeInfo())) {
-                        log.debug("Cluster start {} changing state to IN_CLUSTER", startMasterElement);
-                        collectPreClusterInfo();
-                        state = State.IN_CLUSTER;
-                    }
-                    break;
-                default:
-                    break;
+            if (state == State.NEW) {
+                if (MkvTypeInfos.SEGMENT.equals(startMasterElement.getElementMetaData().getTypeInfo())) {
+                    log.debug("Segment start {} changing state to PRE_CLUSTER", startMasterElement);
+                    resetCollectedData();
+                    state = State.PRE_CLUSTER;
+                }
+            } else if (state == State.PRE_CLUSTER) {
+                if (MkvTypeInfos.CLUSTER.equals(startMasterElement.getElementMetaData().getTypeInfo())) {
+                    log.debug("Cluster start {} changing state to IN_CLUSTER", startMasterElement);
+                    collectPreClusterInfo();
+                    state = State.IN_CLUSTER;
+                }
+            } else {
+                // no-op
             }
         }
 
         @Override
         public void visit(MkvEndMasterElement endMasterElement) throws MkvElementVisitException {
-            switch (state) {
-                case IN_CLUSTER:
-                    if (MkvTypeInfos.CLUSTER.equals(endMasterElement.getElementMetaData().getTypeInfo())) {
-                        state = State.POST_CLUSTER;
-                    }
-                    break;
-                case POST_CLUSTER:
-                    if (MkvTypeInfos.SEGMENT.equals(endMasterElement.getElementMetaData().getTypeInfo())) {
-                        log.debug("Segment end {} changing state to NEW", endMasterElement);
-                        state = State.NEW;
-                    }
-                    break;
-                case PRE_CLUSTER:
-                    if (MkvTypeInfos.SEGMENT.equals(endMasterElement.getElementMetaData().getTypeInfo())) {
-                        log.warn("Segment end {} while in PRE_CLUSTER. Collecting cluster info", endMasterElement);
-                        collectPreClusterInfo();
-                    }
-                    break;
-                default:
-                    break;
+            if (state == State.IN_CLUSTER) {
+                if (MkvTypeInfos.CLUSTER.equals(endMasterElement.getElementMetaData().getTypeInfo())) {
+                    state = State.POST_CLUSTER;
+                }
+            } else if (state == State.POST_CLUSTER) {
+                if (MkvTypeInfos.SEGMENT.equals(endMasterElement.getElementMetaData().getTypeInfo())) {
+                    log.debug("Segment end {} changing state to NEW", endMasterElement);
+                    state = State.NEW;
+                }
+            } else if (state == State.PRE_CLUSTER) {
+                if (MkvTypeInfos.SEGMENT.equals(endMasterElement.getElementMetaData().getTypeInfo())) {
+                    log.warn("Segment end {} while in PRE_CLUSTER. Collecting cluster info", endMasterElement);
+                    collectPreClusterInfo();
+                }
+            } else {
+                // op-op
             }
             // If any tags section finishes, try to update the millisbehind latest and continuation token
             // since there can be multiple in the same segment.

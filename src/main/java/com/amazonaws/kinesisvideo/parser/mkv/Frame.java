@@ -31,9 +31,9 @@ import java.nio.ByteBuffer;
  * This is based on the content of a SimpleBlock in Mkv.
  */
 @Getter
-@AllArgsConstructor(access=AccessLevel.PRIVATE)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder(toBuilder = true)
-@ToString(exclude = {"frameData"})
+@ToString(exclude = { "frameData" })
 public class Frame {
     private final long trackNumber;
     private final int timeCode;
@@ -94,18 +94,17 @@ public class Frame {
     }
 
     private static Lacing getLacing(int laceValue) {
-        switch(laceValue) {
-            case 0:
-                return Lacing.NO;
-            case 1:
-                return Lacing.XIPH;
-            case 2:
-                return Lacing.EBML;
-            case 3:
-                return Lacing.FIXED_SIZE;
-            default:
-                Validate.isTrue(false, "Invalid value of lacing "+laceValue);
+        if (laceValue == 0) {
+            return Lacing.NO;
+        } else if (laceValue == 1) {
+            return Lacing.XIPH;
+        } else if (laceValue == 2) {
+            return Lacing.EBML;
+        } else if (laceValue == 3) {
+            return Lacing.FIXED_SIZE;
+        } else {
+            Validate.isTrue(false, "Invalid value of lacing " + laceValue);
         }
-        throw new IllegalArgumentException("Invalid value of lacing "+laceValue);
+        throw new IllegalArgumentException("Invalid value of lacing " + laceValue);
     }
 }

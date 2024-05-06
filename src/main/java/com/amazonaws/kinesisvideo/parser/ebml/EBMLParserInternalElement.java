@@ -22,13 +22,14 @@ import java.util.Optional;
 
 import static com.amazonaws.kinesisvideo.parser.ebml.EBMLUtils.UNKNOWN_LENGTH_VALUE;
 
+
+enum ElementReadState { NEW, ID_DONE, SIZE_DONE, CONTENT_READING, CONTENT_SKIPPING, FINISHED }
+
 /**
  * This class is used by the parser to represent an EBML Element internally.
  */
 @ToString
 class EBMLParserInternalElement {
-    enum ElementReadState { NEW, ID_DONE, SIZE_DONE, CONTENT_READING, CONTENT_SKIPPING, FINISHED }
-
     private final long startingOffset;
     @Getter
     private final long elementCount;
