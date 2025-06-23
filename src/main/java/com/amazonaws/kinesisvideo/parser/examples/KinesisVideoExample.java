@@ -13,8 +13,6 @@ See the License for the specific language governing permissions and limitations 
 */
 package com.amazonaws.kinesisvideo.parser.examples;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.kinesisvideo.parser.ebml.MkvTypeInfos;
 import com.amazonaws.kinesisvideo.parser.mkv.MkvDataElement;
 import com.amazonaws.kinesisvideo.parser.mkv.MkvElementVisitException;
@@ -24,21 +22,22 @@ import com.amazonaws.kinesisvideo.parser.mkv.MkvStartMasterElement;
 import com.amazonaws.kinesisvideo.parser.mkv.visitors.CompositeMkvElementVisitor;
 import com.amazonaws.kinesisvideo.parser.utilities.FragmentMetadataVisitor;
 import com.amazonaws.kinesisvideo.parser.utilities.OutputSegmentMerger;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.kinesisvideo.AmazonKinesisVideo;
-import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoClientBuilder;
-import com.amazonaws.services.kinesisvideo.model.StartSelector;
-import com.amazonaws.services.kinesisvideo.model.StartSelectorType;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+
 import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import software.amazon.awssdk.services.kinesisvideo.KinesisVideoClient;
 
 import java.io.BufferedOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -63,32 +62,29 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 public class KinesisVideoExample extends KinesisVideoCommon {
-    private static final long SLEEP_PERIOD_MILLIS = TimeUnit.SECONDS.toMillis(3);
-    private static final int DATA_RETENTION_IN_HOURS = 48;
 
-    private final AmazonKinesisVideo amazonKinesisVideo;
+    private final KinesisVideoClient kinesisVideoClient;
     private final InputStream inputStream;
     private final ExecutorService executorService;
-    private PutMediaWorker putMediaWorker;
     private final StreamOps streamOps;
     private GetMediaProcessingArguments getMediaProcessingArguments;
-    private boolean noSampleInputRequired = false;
 
     @Builder
-    private KinesisVideoExample(Regions region,
+    private KinesisVideoExample(Region region,
                                 String streamName,
-                                AWSCredentialsProvider credentialsProvider,
-                                InputStream inputVideoStream,
-                                boolean noSampleInputRequired) {
+                                AwsCredentialsProvider credentialsProvider,
+                                InputStream inputVideoStream) {
         super(region, credentialsProvider, streamName);
-        final AmazonKinesisVideoClientBuilder builder = AmazonKinesisVideoClientBuilder.standard();
-        configureClient(builder);
-        this.amazonKinesisVideo = builder.build();
+
+        this.kinesisVideoClient = KinesisVideoClient.builder()
+                .region(Region.US_WEST_2)
+                .credentialsProvider(ProfileCredentialsProvider.create())
+                .build();
+
         this.inputStream = inputVideoStream;
         this.streamOps = new StreamOps(region,  streamName, credentialsProvider);
         this.executorService = Executors.newFixedThreadPool(2);
-        this.noSampleInputRequired = noSampleInputRequired;
-    }
+     }
 
     /**
      * This method executes the example.
@@ -97,8 +93,6 @@ public class KinesisVideoExample extends KinesisVideoCommon {
      * @throws IOException fails to read video from the input stream or write to the output stream.
      */
     public void execute () throws InterruptedException, IOException {
-        //Create the Kinesis Video stream if it doesn't exist.
-        streamOps.createStreamIfNotExist();
 
         getMediaProcessingArguments = GetMediaProcessingArguments.create();
 
@@ -107,20 +101,12 @@ public class KinesisVideoExample extends KinesisVideoCommon {
             GetMediaWorker getMediaWorker = GetMediaWorker.create(getRegion(),
                     getCredentialsProvider(),
                     getStreamName(),
-                    new StartSelector().withStartSelectorType(StartSelectorType.NOW),
-                    amazonKinesisVideo,
+                    software.amazon.awssdk.services.kinesisvideomedia.model.StartSelector.builder()
+                     .startSelectorType("NOW").build(),
+                      kinesisVideoClient ,
                     getMediaProcessingArgumentsLocal.getMkvElementVisitor());
             executorService.submit(getMediaWorker);
 
-            if (!noSampleInputRequired) {
-                //Start a PutMedia worker to write data to a Kinesis Video Stream.
-                putMediaWorker = PutMediaWorker.create(getRegion(),
-                        getCredentialsProvider(),
-                        getStreamName(),
-                        inputStream,
-                        amazonKinesisVideo);
-                executorService.submit(putMediaWorker);
-            }
 
             //Wait for the workers to finish.
             executorService.shutdown();
@@ -133,10 +119,6 @@ public class KinesisVideoExample extends KinesisVideoCommon {
             }
         }
 
-    }
-
-    public long getFragmentsPersisted() {
-        return putMediaWorker.getNumFragmentsPersisted();
     }
 
     public long getFragmentsRead() {

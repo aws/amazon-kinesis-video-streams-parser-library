@@ -63,7 +63,6 @@ import static com.amazonaws.kinesisvideo.parser.utilities.OutputSegmentMerger.Me
  */
 @Slf4j
 public class OutputSegmentMerger extends CompositeMkvElementVisitor {
-    private final OutputStream outputStream;
     private final List<CollectorState> collectorStates;
     private final Configuration configuration;
 
@@ -89,10 +88,12 @@ public class OutputSegmentMerger extends CompositeMkvElementVisitor {
     private final List<Integer> clusterFrameTimeCodes = new ArrayList<>();
 
 
-    public static final List<EBMLTypeInfo> DEFAULT_MASTER_ELEMENTS_TO_MERGE_ON = ImmutableList.of(
-            MkvTypeInfos.TRACKS,
-            MkvTypeInfos.EBML
-    );
+    public static final List<EBMLTypeInfo> DEFAULT_MASTER_ELEMENTS_TO_MERGE_ON =
+            Collections.unmodifiableList(Arrays.asList(
+                    MkvTypeInfos.TRACKS,
+                    MkvTypeInfos.EBML
+            ));
+
     private static final ByteBuffer SEGMENT_ELEMENT_WITH_UNKNOWN_LENGTH =
             ByteBuffer.wrap(new byte[] { (byte) 0x18, (byte) 0x53, (byte) 0x80, (byte) 0x67,
                     (byte) 0x01, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF,
@@ -109,8 +110,7 @@ public class OutputSegmentMerger extends CompositeMkvElementVisitor {
         childVisitors.add(mergeVisitor);
         this.countVisitor = countVisitor;
 
-        this.outputStream = outputStream;
-        this.outputChannel = Channels.newChannel(this.outputStream);
+        this.outputChannel = Channels.newChannel(outputStream);
         this.bufferingSegmentChannel = Channels.newChannel(bufferingSegmentStream);
         this.bufferingClusterChannel = Channels.newChannel(bufferingClusterStream);
         this.collectorStates = configuration.typeInfosToMergeOn.stream()

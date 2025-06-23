@@ -14,7 +14,7 @@
     <artifactId>amazon-kinesis-video-streams-parser-library</artifactId>
     <packaging>jar</packaging>
     <name>Amazon Kinesis Video Streams Parser Library</name>
-    <version>1.2.5</version>
+    <version>1.2.6</version>
     <description>The Amazon Kinesis Video Streams Parser Library for Java enables Java developers to parse the streams
         returned by GetMedia calls to Amazon Kinesis Video.
     </description>
@@ -43,56 +43,18 @@
                 <artifactId>jackson-dataformat-cbor</artifactId>
                 <version>${jackson.version}</version>
             </dependency>
-            <dependency>
-                <groupId>com.amazonaws</groupId>
-                <artifactId>aws-java-sdk-bom</artifactId>
-                <version>1.12.162</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
+<!--            <dependency>-->
+<!--                <groupId>software.amazon.awssdk</groupId>-->
+<!--                <artifactId>bom</artifactId>-->
+<!--                <version>2.28.22</version>-->
+<!--                <type>pom</type>-->
+<!--                <scope>import</scope>-->
+<!--            </dependency>-->
         </dependencies>
     </dependencyManagement>
 
     <dependencies>
-        <!-- AWS SDK dependencies included in BOM -->
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-rekognition</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-kinesisvideo</artifactId>
-        </dependency>
-        <dependency>
-            <artifactId>aws-java-sdk-kinesis</artifactId>
-            <groupId>com.amazonaws</groupId>
-        </dependency>
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-dynamodb</artifactId>
-        </dependency>
 
-        <!-- AWS SDK dependencies not included in BOM -->
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>amazon-kinesis-video-streams-producer-sdk-java</artifactId>
-            <version>1.12.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>amazon-kinesis-client</artifactId>
-            <version>1.14.10</version>
-        </dependency>
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-lambda-java-core</artifactId>
-            <version>1.2.1</version>
-        </dependency>
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-lambda-java-events</artifactId>
-            <version>2.2.9</version>
-        </dependency>
 
         <!-- Encode/Decode dependencies -->
         <dependency>
@@ -142,6 +104,21 @@
             <type>pom</type>
             <scope>test</scope>
         </dependency>
+
+
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>kinesisvideo</artifactId>
+            <version>2.31.6</version>
+        </dependency>
+
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>kinesisvideomedia</artifactId>
+            <version>2.31.6</version>
+        </dependency>
+
+
     </dependencies>
 
     <developers>

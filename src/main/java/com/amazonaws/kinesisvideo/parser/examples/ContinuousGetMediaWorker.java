@@ -13,28 +13,31 @@ See the License for the specific language governing permissions and limitations 
 */
 package com.amazonaws.kinesisvideo.parser.examples;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.kinesisvideo.parser.mkv.FrameProcessException;
 import com.amazonaws.kinesisvideo.parser.mkv.MkvElementVisitException;
 import com.amazonaws.kinesisvideo.parser.utilities.FragmentMetadata;
-import com.amazonaws.kinesisvideo.parser.mkv.FrameProcessException;
 import com.amazonaws.kinesisvideo.parser.utilities.consumer.GetMediaResponseStreamConsumer;
 import com.amazonaws.kinesisvideo.parser.utilities.consumer.GetMediaResponseStreamConsumerFactory;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.kinesisvideo.AmazonKinesisVideo;
-import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoMedia;
-import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoMediaClientBuilder;
-import com.amazonaws.services.kinesisvideo.model.APIName;
-import com.amazonaws.services.kinesisvideo.model.GetDataEndpointRequest;
-import com.amazonaws.services.kinesisvideo.model.GetMediaRequest;
-import com.amazonaws.services.kinesisvideo.model.GetMediaResult;
-import com.amazonaws.services.kinesisvideo.model.StartSelector;
-import com.amazonaws.services.kinesisvideo.model.StartSelectorType;
+
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.regions.Region;
+
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
+import software.amazon.awssdk.services.kinesisvideo.KinesisVideoClient;
+import software.amazon.awssdk.services.kinesisvideo.model.APIName;
+import software.amazon.awssdk.services.kinesisvideo.model.GetDataEndpointRequest;
+import software.amazon.awssdk.services.kinesisvideo.model.GetDataEndpointResponse;
+import software.amazon.awssdk.services.kinesisvideomedia.KinesisVideoMediaClient;
+import software.amazon.awssdk.services.kinesisvideomedia.model.GetMediaRequest;
+import software.amazon.awssdk.services.kinesisvideomedia.model.GetMediaResponse;
+import software.amazon.awssdk.services.kinesisvideomedia.model.StartSelector;
+import software.amazon.awssdk.services.kinesisvideomedia.model.StartSelectorType;
 
 import java.io.IOException;
-import java.io.InputStream;
+import java.net.URI;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -44,37 +47,44 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Slf4j
 public class ContinuousGetMediaWorker extends KinesisVideoCommon implements Runnable {
     private static final int HTTP_STATUS_OK = 200;
-    private final AmazonKinesisVideoMedia videoMedia;
+    private final KinesisVideoMediaClient kinesisVideoMediaClient;
     private final GetMediaResponseStreamConsumerFactory consumerFactory;
     private final StartSelector startSelector;
     private Optional<String> fragmentNumberToStartAfter = Optional.empty();
-    private volatile AtomicBoolean shouldStop = new AtomicBoolean(false);
+    private AtomicBoolean shouldStop = new AtomicBoolean(false);
 
-    private ContinuousGetMediaWorker(Regions region,
-            AWSCredentialsProvider credentialsProvider,
-            String streamName,
-            StartSelector startSelector,
-            String endPoint,
-            GetMediaResponseStreamConsumerFactory consumerFactory) {
+    private ContinuousGetMediaWorker(Region region,
+                                     AwsCredentialsProvider credentialsProvider,
+                                     String streamName,
+                                     StartSelector startSelector,
+                                     String endPoint,
+                                     GetMediaResponseStreamConsumerFactory consumerFactory) {
         super(region, credentialsProvider, streamName);
 
-        AmazonKinesisVideoMediaClientBuilder builder = AmazonKinesisVideoMediaClientBuilder.standard()
-                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(endPoint, region.getName()))
-                .withCredentials(getCredentialsProvider());
+        this.kinesisVideoMediaClient = KinesisVideoMediaClient.builder()
+                .region(Region.US_WEST_2)
+                .endpointOverride(URI.create(endPoint))
+                .credentialsProvider(ProfileCredentialsProvider.create())
+                .build();
 
-        this.videoMedia = builder.build();
         this.consumerFactory = consumerFactory;
         this.startSelector = startSelector;
     }
 
-    public static ContinuousGetMediaWorker create(Regions region,
-            AWSCredentialsProvider credentialsProvider,
-            String streamName,
-            StartSelector startSelector,
-            AmazonKinesisVideo amazonKinesisVideo,
-            GetMediaResponseStreamConsumerFactory consumer) {
-        String endPoint = amazonKinesisVideo.getDataEndpoint(new GetDataEndpointRequest().withAPIName(APIName.GET_MEDIA)
-                .withStreamName(streamName)).getDataEndpoint();
+    public static ContinuousGetMediaWorker create(Region region,
+                                                  AwsCredentialsProvider credentialsProvider,
+                                                  String streamName,
+                                                  StartSelector startSelector,
+                                                  KinesisVideoClient kinesisVideoClient,
+                                                  GetMediaResponseStreamConsumerFactory consumer) {
+
+        GetDataEndpointResponse endpointResponse = kinesisVideoClient.getDataEndpoint(
+                GetDataEndpointRequest.builder()
+                        .streamName(streamName)
+                        .apiName(APIName.GET_MEDIA)
+                        .build());
+        String endPoint = endpointResponse.dataEndpoint();
+
 
         return new ContinuousGetMediaWorker(region, credentialsProvider, streamName, startSelector, endPoint, consumer);
     }
@@ -86,23 +96,32 @@ public class ContinuousGetMediaWorker extends KinesisVideoCommon implements Runn
 
     @Override
     public void run() {
+        ResponseInputStream<GetMediaResponse> mediaResponseResponseInputStream = null;
         log.info("Start ContinuousGetMedia worker for stream {}", streamName);
         while (!shouldStop.get()) {
-            GetMediaResult getMediaResult = null;
+
+            log.info("StreamingMkvReader created for stream {} ", streamName);
+
             try {
+                StartSelector selectorToUse = fragmentNumberToStartAfter.map(fn -> StartSelector.builder().startSelectorType(StartSelectorType.FRAGMENT_NUMBER)
+                        .afterFragmentNumber(fn)).orElse(startSelector.toBuilder()).build();
 
-                StartSelector selectorToUse = fragmentNumberToStartAfter.map(fn -> new StartSelector().withStartSelectorType(StartSelectorType.FRAGMENT_NUMBER)
-                        .withAfterFragmentNumber(fn)).orElse(startSelector);
+                GetMediaRequest getMediaRequest =
+                        software.amazon.awssdk.services.kinesisvideomedia.model.GetMediaRequest.builder()
+                                .streamName(streamName)
+                                .startSelector(selectorToUse)
+                                .build();
 
-                getMediaResult = videoMedia.getMedia(new GetMediaRequest().withStreamName(streamName).withStartSelector(selectorToUse));
+                mediaResponseResponseInputStream =
+                        this.kinesisVideoMediaClient.getMedia(getMediaRequest);
                 log.info("Start processing GetMedia called for stream {} response {} requestId {}",
                         streamName,
-                        getMediaResult.getSdkHttpMetadata().getHttpStatusCode(),
-                        getMediaResult.getSdkResponseMetadata().getRequestId());
+                        mediaResponseResponseInputStream.response().sdkHttpResponse().statusCode(),
+                        mediaResponseResponseInputStream.response().responseMetadata().requestId());
 
-                if (getMediaResult.getSdkHttpMetadata().getHttpStatusCode() == HTTP_STATUS_OK) {
+                if (mediaResponseResponseInputStream.response().sdkHttpResponse().statusCode() == HTTP_STATUS_OK) {
                     try (GetMediaResponseStreamConsumer consumer = consumerFactory.createConsumer()) {
-                        consumer.process(getMediaResult.getPayload(), this::updateFragmentNumberToStartAfter);
+                        consumer.process(mediaResponseResponseInputStream, this::updateFragmentNumberToStartAfter);
                     }
                 } else {
                     Thread.sleep(200);
@@ -116,24 +135,21 @@ public class ContinuousGetMediaWorker extends KinesisVideoCommon implements Runn
                 Thread.currentThread().interrupt();
                 throw new RuntimeException(ie);
             } catch (Throwable t) {
-                log.error("Throwable",t);
+                log.error("Throwable", t);
             } finally {
-                closeGetMediaResponse(getMediaResult);
+                closeGetMediaResponse(mediaResponseResponseInputStream);
                 log.info("Exit processing GetMedia called for stream {}", streamName);
             }
         }
         log.info("Exit ContinuousGetMedia worker for stream {}", streamName);
     }
 
-    private void closeGetMediaResponse(final GetMediaResult getMediaResult) {
-        if (getMediaResult != null) {
-            final InputStream payload = getMediaResult.getPayload();
-            if (payload != null) {
-                try {
-                    payload.close();
-                } catch (final IOException e) {
-                    // Ignore close exception;
-                }
+    private void closeGetMediaResponse(final ResponseInputStream<GetMediaResponse> mediaResponseResponseInputStream) {
+        if (mediaResponseResponseInputStream != null) {
+            try {
+                mediaResponseResponseInputStream.close();
+            } catch (final IOException e) {
+                // Ignore close exception;
             }
         }
     }

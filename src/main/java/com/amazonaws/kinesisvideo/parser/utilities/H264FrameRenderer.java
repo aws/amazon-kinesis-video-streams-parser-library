@@ -23,7 +23,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import static com.amazonaws.kinesisvideo.parser.utilities.BufferedImageUtil.addTextToImage;
 
-
 @Slf4j
 public class H264FrameRenderer extends H264FrameDecoder {
     private static final int PIXEL_TO_LEFT = 10;
@@ -45,18 +44,18 @@ public class H264FrameRenderer extends H264FrameDecoder {
     @Override
     public void process(Frame frame, MkvTrackMetadata trackMetadata, Optional<FragmentMetadata> fragmentMetadata,
                         Optional<FragmentMetadataVisitor.MkvTagProcessor> tagProcessor) throws FrameProcessException {
+
         final BufferedImage bufferedImage = decodeH264Frame(frame, trackMetadata);
+
         if (tagProcessor.isPresent()) {
             final FragmentMetadataVisitor.BasicMkvTagProcessor processor =
                     (FragmentMetadataVisitor.BasicMkvTagProcessor) tagProcessor.get();
 
-            if (fragmentMetadata.isPresent()) {
-                addTextToImage(bufferedImage,
-                        String.format("Fragment Number: %s", fragmentMetadata.get().getFragmentNumberString()),
-                        PIXEL_TO_LEFT, PIXEL_TO_TOP_LINE_1);
-            }
+            fragmentMetadata.ifPresent(metadata -> addTextToImage(bufferedImage,
+                    String.format("Fragment Number: %s", metadata.getFragmentNumberString()),
+                    PIXEL_TO_LEFT, PIXEL_TO_TOP_LINE_1));
 
-            if (processor.getTags().size() > 0) {
+            if (!processor.getTags().isEmpty()) {
                 addTextToImage(bufferedImage, "Fragment Metadata: " + processor.getTags().toString(),
                         PIXEL_TO_LEFT, PIXEL_TO_TOP_LINE_2);
             } else {
@@ -66,6 +65,5 @@ public class H264FrameRenderer extends H264FrameDecoder {
         }
         kinesisVideoFrameViewer.update(bufferedImage);
     }
-
 
 }

@@ -13,48 +13,23 @@ See the License for the specific language governing permissions and limitations 
 */
 package com.amazonaws.kinesisvideo.parser.examples;
 
-import com.amazonaws.auth.profile.ProfileCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
 import com.amazonaws.kinesisvideo.parser.TestResourceUtil;
-import com.amazonaws.regions.Regions;
+
 import org.junit.Ignore;
 import org.junit.Test;
+
 
 import java.io.IOException;
 
 public class KinesisVideoRendererExampleTest {
-    /* long running test */
-    @Ignore
-    @Test
-    public void testExample() throws InterruptedException, IOException {
-        KinesisVideoRendererExample example = KinesisVideoRendererExample.builder().region(Regions.US_WEST_2)
-                .streamName("render-example-stream")
-                .credentialsProvider(new ProfileCredentialsProvider())
-                .inputVideoStream(TestResourceUtil.getTestInputStream("vogels_480.mkv"))
-                .renderFragmentMetadata(false)
-                .build();
-
-        example.execute();
-    }
-
-    @Ignore
-    @Test
-    public void testDifferentResolution() throws InterruptedException, IOException {
-        KinesisVideoRendererExample example = KinesisVideoRendererExample.builder().region(Regions.US_WEST_2)
-                .streamName("render-example-stream")
-                .credentialsProvider(new ProfileCredentialsProvider())
-                .inputVideoStream(TestResourceUtil.getTestInputStream("vogels_330.mkv"))
-                .renderFragmentMetadata(false)
-                .build();
-
-        example.execute();
-    }
 
     @Ignore
     @Test
     public void testConsumerExample() throws InterruptedException, IOException {
-        KinesisVideoRendererExample example = KinesisVideoRendererExample.builder().region(Regions.US_WEST_2)
-                .streamName("render-example-stream")
-                .credentialsProvider(new ProfileCredentialsProvider())
+        KinesisVideoRendererExample example = KinesisVideoRendererExample.builder().region(Region.US_WEST_2)
+                .streamName("render_example_stream")
+                .credentialsProvider(software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider.create())
                 // Display the tags in the frame viewer window
                 .renderFragmentMetadata(true)
                 // Use existing stream in KVS (with Producer sending)
