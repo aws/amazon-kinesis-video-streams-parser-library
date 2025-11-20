@@ -17,6 +17,7 @@ import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
 import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.kinesisvideo.KinesisVideoClient;
 
@@ -34,6 +35,7 @@ import software.amazon.awssdk.services.kinesisvideomedia.model.StartSelector;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.URI;
+import java.time.Duration;
 
 /**
  * Worker used to make a GetMedia call to Kinesis Video and stream in data and parse it and apply a visitor.
@@ -61,7 +63,7 @@ public class GetMediaWorker extends KinesisVideoCommon implements Runnable {
         this.kvsVideoMediaClient = KinesisVideoMediaClient.builder()
                 .endpointOverride(URI.create(endPoint))
                 .region(kvsVideoClient.serviceClientConfiguration().region())
-                .credentialsProvider(kvsVideoClient.serviceClientConfiguration().credentialsProvider())
+                .credentialsProvider(kvsVideoClient.serviceClientConfiguration().credentialsProvider()).overrideConfiguration(ClientOverrideConfiguration.builder().apiCallAttemptTimeout(Duration.ofMinutes(2)).build())
                 .build();
 
         this.elementVisitor = elementVisitor;

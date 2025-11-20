@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and limitations 
 package com.amazonaws.kinesisvideo.parser.examples;
 
 import software.amazon.awssdk.regions.Region;
-import com.amazonaws.kinesisvideo.parser.TestResourceUtil;
 
 import org.junit.Ignore;
 import org.junit.Test;
@@ -28,7 +27,7 @@ public class KinesisVideoRendererExampleTest {
     @Test
     public void testConsumerExample() throws InterruptedException, IOException {
         KinesisVideoRendererExample example = KinesisVideoRendererExample.builder().region(Region.US_WEST_2)
-                .streamName("render_example_stream")
+                .streamName("render-example-stream")
                 .credentialsProvider(software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider.create())
                 // Display the tags in the frame viewer window
                 .renderFragmentMetadata(true)
