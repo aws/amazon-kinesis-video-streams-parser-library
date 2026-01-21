@@ -31,5 +31,10 @@ jobs:
           distribution: 'adopt'
           cache: maven
       - name: Build
-        run: mvn clean install
+        run: |
+          if [[ "${{ runner.os }}" == "Linux" ]]; then
+            xvfb-run -a mvn clean install
+          else
+            mvn clean install
+          fi
         shell: bash
