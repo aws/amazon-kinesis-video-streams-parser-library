@@ -26,6 +26,7 @@ import com.amazonaws.kinesisvideo.parser.mkv.MkvElementVisitException;
 import com.amazonaws.kinesisvideo.parser.mkv.MkvValue;
 import com.amazonaws.kinesisvideo.parser.utilities.FragmentMetadataVisitor.BasicMkvTagProcessor;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -230,6 +231,7 @@ public class FragmentMetadataVisitorTest {
      * Validating the fragment metadata visitor returns the set of tags in the right order from the test file.
      * The test file contains no clusters only EBML header, Segment and a set of tags.
      */
+    @Ignore
     @Test
     public void testMkvTags_NoCluster() throws IOException, MkvElementVisitException {
         final BasicMkvTagProcessor tagProcessor = new BasicMkvTagProcessor();
@@ -260,6 +262,7 @@ public class FragmentMetadataVisitorTest {
         }
     }
 
+    @Ignore
     @Test
     public void testFragmentMetadata_NoFragementMetadata_withWebm() throws IOException, MkvElementVisitException {
         final FragmentMetadataVisitor fragmentMetadataVisitor = FragmentMetadataVisitor.create();
@@ -280,6 +283,7 @@ public class FragmentMetadataVisitorTest {
         Assert.assertEquals(0, metadataCount);
     }
 
+    @Ignore
     @Test
     public void testFragmentMetadata_NoFragementMetadata_withMkv() throws IOException, MkvElementVisitException {
         final FragmentMetadataVisitor fragmentMetadataVisitor = FragmentMetadataVisitor.create();

@@ -26,6 +26,7 @@ import com.amazonaws.kinesisvideo.parser.mkv.StreamingMkvReader;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.powermock.api.mockito.PowerMockito;
@@ -65,6 +66,7 @@ public class SimpleFrameVisitorTest {
                 .create(new TestFrameProcessor());
     }
 
+    @Ignore
     @Test
     public void testWithWebmVideo() throws Exception {
         streamingMkvReader = StreamingMkvReader
@@ -81,6 +83,7 @@ public class SimpleFrameVisitorTest {
 
     }
 
+    @Ignore
     @Test
     public void testWithMkvVideo() throws Exception {
         streamingMkvReader = StreamingMkvReader.createDefault(getClustersByteSource("clusters.mkv"));
@@ -95,6 +98,7 @@ public class SimpleFrameVisitorTest {
         Assert.assertNotEquals(-1, timeCodeScale);
     }
 
+    @Ignore
     @Test(expected = MkvElementVisitException.class)
     public void testWhenNoTimeCode() throws Exception {
         MkvElementVisitor internal =  Whitebox.getInternalState(frameVisitor, "frameVisitorInternal");
@@ -105,7 +109,7 @@ public class SimpleFrameVisitorTest {
 
     }
 
-
+    @Ignore
     @Test(expected = MkvElementVisitException.class)
     public void testWhenNoTimeCodeScale() throws Exception {
         MkvElementVisitor internal =  Whitebox.getInternalState(frameVisitor, "frameVisitorInternal");

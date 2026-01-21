@@ -77,17 +77,23 @@ public class H264FrameDecoder implements FrameVisitor.FrameProcessor  {
             // Work around for color issues in JCodec
             // https://github.com/jcodec/jcodec/issues/59
             // https://github.com/jcodec/jcodec/issues/192
-            final byte[][] dataTemp = new byte[3][pic.getData().length];
-            dataTemp[0] = pic.getPlaneData(0);
-            dataTemp[1] = pic.getPlaneData(2);
-            dataTemp[2] = pic.getPlaneData(1);
 
-            final Picture tmpBuf = Picture.createPicture(pixelWidth, pixelHeight, dataTemp, ColorSpace.YUV420J);
-            transform.transform(tmpBuf, rgb);
-            AWTUtil.toBufferedImage(rgb, bufferedImage);
+            convertToImage(pic, pixelWidth, pixelHeight, rgb, bufferedImage);
             frameCount++;
         }
         return bufferedImage;
+    }
+
+    void convertToImage(Picture pic, int pixelWidth, int pixelHeight, Picture rgb, BufferedImage bufferedImage) {
+
+        final byte[][] dataTemp = new byte[3][pic.getData().length];
+        dataTemp[0] = pic.getPlaneData(0);
+        dataTemp[1] = pic.getPlaneData(2);
+        dataTemp[2] = pic.getPlaneData(1);
+
+        final Picture tmpBuf = Picture.createPicture(pixelWidth, pixelHeight, dataTemp, ColorSpace.YUV420J);
+        transform.transform(tmpBuf, rgb);
+        AWTUtil.toBufferedImage(rgb, bufferedImage);
     }
 
     public ByteBuffer getCodecPrivateData() {

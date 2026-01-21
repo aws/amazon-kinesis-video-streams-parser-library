@@ -13,57 +13,76 @@ See the License for the specific language governing permissions and limitations 
 */
 package com.amazonaws.kinesisvideo.parser.examples;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.client.builder.AwsClientBuilder;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+
+import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.kinesisvideo.KinesisVideoClient;
+
+import software.amazon.awssdk.services.kinesisvideo.model.APIName;
+import software.amazon.awssdk.services.kinesisvideo.model.GetDataEndpointRequest;
+import software.amazon.awssdk.services.kinesisvideo.model.GetDataEndpointResponse;
+import software.amazon.awssdk.services.kinesisvideomedia.KinesisVideoMediaClient;
 import com.amazonaws.kinesisvideo.parser.ebml.InputStreamParserByteSource;
 import com.amazonaws.kinesisvideo.parser.mkv.MkvElementVisitException;
 import com.amazonaws.kinesisvideo.parser.mkv.MkvElementVisitor;
 import com.amazonaws.kinesisvideo.parser.mkv.StreamingMkvReader;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.kinesisvideo.AmazonKinesisVideo;
-import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoMedia;
-import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoMediaClientBuilder;
-import com.amazonaws.services.kinesisvideo.model.APIName;
-import com.amazonaws.services.kinesisvideo.model.GetDataEndpointRequest;
-import com.amazonaws.services.kinesisvideo.model.GetMediaRequest;
-import com.amazonaws.services.kinesisvideo.model.GetMediaResult;
-import com.amazonaws.services.kinesisvideo.model.StartSelector;
+import software.amazon.awssdk.services.kinesisvideomedia.model.GetMediaResponse;
+import software.amazon.awssdk.services.kinesisvideomedia.model.StartSelector;
+
 import lombok.extern.slf4j.Slf4j;
+
+import java.net.URI;
+import java.time.Duration;
 
 /**
  * Worker used to make a GetMedia call to Kinesis Video and stream in data and parse it and apply a visitor.
  */
 @Slf4j
 public class GetMediaWorker extends KinesisVideoCommon implements Runnable {
-    private final AmazonKinesisVideoMedia videoMedia;
+    private final KinesisVideoMediaClient kvsVideoMediaClient;
     private final MkvElementVisitor elementVisitor;
     private final StartSelector startSelector;
 
-    private GetMediaWorker(Regions region,
-            AWSCredentialsProvider credentialsProvider,
-            String streamName,
-            StartSelector startSelector,
-            String endPoint,
-            MkvElementVisitor elementVisitor) {
+    private GetMediaWorker(Region region,
+                           AwsCredentialsProvider credentialsProvider,
+                           String streamName,
+                           StartSelector startSelector,
+                           String endPoint,
+                           MkvElementVisitor elementVisitor) {
         super(region, credentialsProvider, streamName);
 
-        AmazonKinesisVideoMediaClientBuilder builder = AmazonKinesisVideoMediaClientBuilder.standard()
-                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(endPoint, region.getName()))
-                .withCredentials(getCredentialsProvider());
+        KinesisVideoClient kvsVideoClient = KinesisVideoClient.builder()
+                .region(Region.US_WEST_2)
+                .endpointOverride(URI.create(endPoint))
+                .credentialsProvider(ProfileCredentialsProvider.create())
+                .build();
 
-        this.videoMedia = builder.build();
+        this.kvsVideoMediaClient = KinesisVideoMediaClient.builder()
+                .endpointOverride(URI.create(endPoint))
+                .region(kvsVideoClient.serviceClientConfiguration().region())
+                .credentialsProvider(kvsVideoClient.serviceClientConfiguration().credentialsProvider()).overrideConfiguration(ClientOverrideConfiguration.builder().apiCallAttemptTimeout(Duration.ofMinutes(2)).build())
+                .build();
+
         this.elementVisitor = elementVisitor;
         this.startSelector = startSelector;
     }
 
-    public static GetMediaWorker create(Regions region,
-            AWSCredentialsProvider credentialsProvider,
-            String streamName,
-            StartSelector startSelector,
-            AmazonKinesisVideo amazonKinesisVideo,
-            MkvElementVisitor visitor) {
-        String endPoint = amazonKinesisVideo.getDataEndpoint(new GetDataEndpointRequest().withAPIName(APIName.GET_MEDIA)
-                .withStreamName(streamName)).getDataEndpoint();
+    public static GetMediaWorker create(Region region,
+                                        AwsCredentialsProvider credentialsProvider,
+                                        String streamName,
+                                        StartSelector startSelector,
+                                        KinesisVideoClient kinesisVideoClient,
+                                        MkvElementVisitor visitor) {
+
+        GetDataEndpointResponse endpointResponse = kinesisVideoClient.getDataEndpoint(
+                GetDataEndpointRequest.builder()
+                        .streamName(streamName)
+                        .apiName(APIName.GET_MEDIA)
+                        .build());
+        String endPoint = endpointResponse.dataEndpoint();
 
         return new GetMediaWorker(region, credentialsProvider, streamName, startSelector, endPoint, visitor);
     }
@@ -73,18 +92,29 @@ public class GetMediaWorker extends KinesisVideoCommon implements Runnable {
         try {
             log.info("Start GetMedia worker on stream {}", streamName);
 
-                GetMediaResult result = videoMedia.getMedia(new GetMediaRequest().withStreamName(streamName).withStartSelector(startSelector));
+            software.amazon.awssdk.services.kinesisvideomedia.model.GetMediaRequest getMediaRequest =
+                    software.amazon.awssdk.services.kinesisvideomedia.model.GetMediaRequest.builder()
+                            .streamName(streamName)
+                            .startSelector(startSelector)
+                            .build();
+
+            ResponseInputStream<GetMediaResponse> mediaResponseResponseInputStream =
+                    this.kvsVideoMediaClient.getMedia(getMediaRequest);
+
             log.info("GetMedia called on stream {} response {} requestId {}",
                     streamName,
-                    result.getSdkHttpMetadata().getHttpStatusCode(),
-                    result.getSdkResponseMetadata().getRequestId());
+                    mediaResponseResponseInputStream.response().sdkHttpResponse().statusCode(),
+                    mediaResponseResponseInputStream.response().responseMetadata().requestId());
 
-            StreamingMkvReader mkvStreamReader = StreamingMkvReader.createDefault(new InputStreamParserByteSource(result.getPayload()));
+            StreamingMkvReader mkvStreamReader = StreamingMkvReader.createDefault(
+                    new InputStreamParserByteSource(mediaResponseResponseInputStream));
+
             log.info("StreamingMkvReader created for stream {} ", streamName);
+
             try {
                 mkvStreamReader.apply(this.elementVisitor);
             } catch (MkvElementVisitException e) {
-                log.error("Exception while accepting visitor {}", e);
+                log.error("Exception while accepting visitor", e);
             }
         } catch (Throwable t) {
             log.error("Failure in GetMediaWorker for streamName {} {}", streamName, t.toString());

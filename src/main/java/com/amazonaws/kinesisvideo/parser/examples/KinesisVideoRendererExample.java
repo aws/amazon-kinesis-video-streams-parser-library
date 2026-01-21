@@ -21,32 +21,32 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.kinesisvideo.parser.utilities.FragmentMetadataVisitor;
 import com.amazonaws.kinesisvideo.parser.utilities.FrameVisitor;
 import com.amazonaws.kinesisvideo.parser.utilities.H264FrameRenderer;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.kinesisvideo.model.StartSelector;
-import com.amazonaws.services.kinesisvideo.model.StartSelectorType;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+
+
 import lombok.Builder;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import software.amazon.awssdk.services.kinesisvideomedia.model.StartSelector;
+import software.amazon.awssdk.services.kinesisvideomedia.model.StartSelectorType;
 
 /*
- * Example for integrating with Kinesis Video.
+ * Example for integrating with Kinesis Video Streams GetMedia API.
  * This example does:
- * 1. Create a stream, deleting and recreating if the stream of the same name already exists.
-      It sets the retention period of the created stream to 48 hours.
- * 2. Call PutMedia to stream video fragments into the stream.
- * 3. Calls GetMedia to stream video fragments out of the stream.
- * 4. It uses the StreamingMkvParser to parse the returned the stream and perform these steps:
+
+ * 1 Calls GetMedia to stream video fragments out of the stream.
+ * 2. It uses the StreamingMkvParser to parse the returned the stream and perform these steps:
  *   2.1 The GetMedia output stream has one mkv segment for each fragment. Merge the mkv segments that share track
  *        information into a single segment.
  *   2.2 Decodes the frames using h264 decoder (using JCodec) and
  *   2.3 It renders the image using  JFrame for viewing
  *
  * To run the example:
- *   Run the Unit test  KinesisVideoRendererExampleTest
+ *   Run the Unit test  KinesisVideoRendererExampleTest (by commenting the @ignore)
  *
  */
 
@@ -60,12 +60,11 @@ public class KinesisVideoRendererExample extends KinesisVideoCommon {
     private final ExecutorService executorService;
     private KinesisVideoRendererExample.GetMediaProcessingArguments getMediaProcessingArguments;
     private boolean renderFragmentMetadata = true;
-    private boolean noSampleInputRequired = false;
 
     @Builder
-    private KinesisVideoRendererExample(Regions region,
+    private KinesisVideoRendererExample(Region region,
                                         String streamName,
-                                        AWSCredentialsProvider credentialsProvider,
+                                        AwsCredentialsProvider credentialsProvider,
                                         InputStream inputVideoStream,
                                         boolean renderFragmentMetadata,
                                         boolean noSampleInputRequired) {
@@ -74,7 +73,6 @@ public class KinesisVideoRendererExample extends KinesisVideoCommon {
         this.streamOps = new StreamOps(region,  streamName, credentialsProvider);
         this.executorService = Executors.newFixedThreadPool(2);
         this.renderFragmentMetadata = renderFragmentMetadata;
-        this.noSampleInputRequired = noSampleInputRequired;
     }
 
     /**
@@ -85,30 +83,18 @@ public class KinesisVideoRendererExample extends KinesisVideoCommon {
      */
     public void execute() throws InterruptedException, IOException {
 
-        streamOps.createStreamIfNotExist();
-
         getMediaProcessingArguments = KinesisVideoRendererExample.GetMediaProcessingArguments.create(
                 renderFragmentMetadata ?
                         Optional.of(new FragmentMetadataVisitor.BasicMkvTagProcessor()) : Optional.empty());
 
         try (KinesisVideoRendererExample.GetMediaProcessingArguments getMediaProcessingArgumentsLocal = getMediaProcessingArguments) {
-
-            if (!noSampleInputRequired) {
-                //Start a PutMedia worker to write data to a Kinesis Video Stream.
-                PutMediaWorker putMediaWorker = PutMediaWorker.create(getRegion(),
-                        getCredentialsProvider(),
-                        getStreamName(),
-                        inputStream,
-                        streamOps.amazonKinesisVideo);
-                executorService.submit(putMediaWorker);
-            }
-
             //Start a GetMedia worker to read and process data from the Kinesis Video Stream.
             GetMediaWorker getMediaWorker = GetMediaWorker.create(getRegion(),
                     getCredentialsProvider(),
                     getStreamName(),
-                    new StartSelector().withStartSelectorType(StartSelectorType.NOW),
-                    streamOps.amazonKinesisVideo,
+                    StartSelector.builder()
+                            .startSelectorType(StartSelectorType.NOW).build(),
+                    streamOps.getKvsVideoClient(),
                     getMediaProcessingArgumentsLocal.getFrameVisitor());
             executorService.submit(getMediaWorker);
 

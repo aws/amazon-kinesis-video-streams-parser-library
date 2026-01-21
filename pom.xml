@@ -14,7 +14,7 @@
     <artifactId>amazon-kinesis-video-streams-parser-library</artifactId>
     <packaging>jar</packaging>
     <name>Amazon Kinesis Video Streams Parser Library</name>
-    <version>1.2.5</version>
+    <version>2.0.0</version>
     <description>The Amazon Kinesis Video Streams Parser Library for Java enables Java developers to parse the streams
         returned by GetMedia calls to Amazon Kinesis Video.
     </description>
@@ -72,6 +72,18 @@
             <artifactId>aws-java-sdk-dynamodb</artifactId>
         </dependency>
 
+        <!-- AWS SDK v2 dependencies -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>kinesisvideo</artifactId>
+            <version>2.31.6</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>kinesisvideomedia</artifactId>
+            <version>2.31.6</version>
+        </dependency>
+
         <!-- AWS SDK dependencies not included in BOM -->
         <dependency>
             <groupId>com.amazonaws</groupId>
@@ -117,7 +129,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.22</version>
+            <version>1.18.30</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -155,7 +167,6 @@
         </developer>
     </developers>
     <build>
-        <sourceDirectory>${project.build.directory}/generated-sources/delombok</sourceDirectory>
         <pluginManagement>
             <plugins>
                 <plugin>
@@ -166,6 +177,13 @@
                         <source>1.8</source>
                         <target>1.8</target>
                         <encoding>UTF-8</encoding>
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                                <version>1.18.30</version>
+                            </path>
+                        </annotationProcessorPaths>
                     </configuration>
                 </plugin>
             </plugins>
@@ -173,43 +191,11 @@
 
         <plugins>
             <plugin>
-                <groupId>org.projectlombok</groupId>
-                <artifactId>lombok-maven-plugin</artifactId>
-                <version>1.18.20.0</version>
-                <executions>
-                    <execution>
-                        <id>delombok</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>delombok</goal>
-                        </goals>
-                        <configuration>
-                            <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
-                            <encoding>UTF-8</encoding>
-                            <formatPreferences>
-                                <javaLangAsFQN>skip</javaLangAsFQN>
-                            </formatPreferences>
-                            <verbose>true</verbose>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>test-delombok</id>
-                        <phase>generate-test-sources</phase>
-                        <goals>
-                            <goal>testDelombok</goal>
-                        </goals>
-                        <configuration>
-                            <encoding>UTF-8</encoding>
-                            <verbose>true</verbose>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>3.3.1</version>
                 <configuration>
+                <doclint>none</doclint><failOnError>false</failOnError>
                     <source>8</source>
                 </configuration>
                 <executions>
@@ -244,7 +230,7 @@
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
-                            <version>1.18.22</version>
+                            <version>1.18.30</version>
                         </path>
                     </annotationProcessorPaths>
                     <createDependencyReducedPom>false</createDependencyReducedPom>
