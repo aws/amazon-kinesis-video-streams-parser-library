@@ -17,12 +17,13 @@ jobs:
       id-token: write
       contents: read
     strategy:
+      fail-fast: false
       matrix:
-        os: [ macos-10.15, ubuntu-18.04, windows-2019]
+        os: [ macos-15-intel, ubuntu-latest, windows-2022]
         java: [ 8, 11, 16 ]
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
