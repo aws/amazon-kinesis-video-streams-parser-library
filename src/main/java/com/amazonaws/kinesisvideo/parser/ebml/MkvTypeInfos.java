@@ -17,7 +17,10 @@ package com.amazonaws.kinesisvideo.parser.ebml;
  * Type information for the EBML elements in a Mkv file or stream.
  * This provides the semantics of the EBML elements in a Mkv file or stream.
  * This is based on the xml file hosted by the matroska org at
- * https://github.com/Matroska-Org/foundation-source/blob/master/spectool/specdata.xml (commit e074b5d)
+ * https://github.com/Matroska-Org/foundation-source/blob/master/spectool/specdata.xml (commit 7f2753a),
+ * the last revision of that file before the project's canonical schema moved to
+ * https://github.com/ietf-wg-cellar/matroska-specification/blob/master/ebml_matroska.xml
+ * (commit 7611d1e), plus the elements added to the spec since specdata.xml was last updated.
  */
 public class MkvTypeInfos {
 	public static final EBMLTypeInfo EBML = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("EBML").id(0x1A45DFA3).level(0).type(
@@ -180,6 +183,16 @@ public class MkvTypeInfos {
             EBMLTypeInfo.TYPE.UINTEGER).build();
 	public static final EBMLTypeInfo FLAGFORCED = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("FlagForced").id(0x55AA).level(3).type(
             EBMLTypeInfo.TYPE.UINTEGER).build();
+	public static final EBMLTypeInfo FLAGHEARINGIMPAIRED = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("FlagHearingImpaired").id(0x55AB).level(3).type(
+            EBMLTypeInfo.TYPE.UINTEGER).build();
+	public static final EBMLTypeInfo FLAGVISUALIMPAIRED = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("FlagVisualImpaired").id(0x55AC).level(3).type(
+            EBMLTypeInfo.TYPE.UINTEGER).build();
+	public static final EBMLTypeInfo FLAGTEXTDESCRIPTIONS = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("FlagTextDescriptions").id(0x55AD).level(3).type(
+            EBMLTypeInfo.TYPE.UINTEGER).build();
+	public static final EBMLTypeInfo FLAGORIGINAL = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("FlagOriginal").id(0x55AE).level(3).type(
+            EBMLTypeInfo.TYPE.UINTEGER).build();
+	public static final EBMLTypeInfo FLAGCOMMENTARY = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("FlagCommentary").id(0x55AF).level(3).type(
+            EBMLTypeInfo.TYPE.UINTEGER).build();
 	public static final EBMLTypeInfo FLAGLACING = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("FlagLacing").id(0x9C).level(3).type(
             EBMLTypeInfo.TYPE.UINTEGER).build();
 	public static final EBMLTypeInfo MINCACHE = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("MinCache").id(0x6DE7).level(3).type(
@@ -196,9 +209,21 @@ public class MkvTypeInfos {
             EBMLTypeInfo.TYPE.INTEGER).build();
 	public static final EBMLTypeInfo MAXBLOCKADDITIONID = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("MaxBlockAdditionID").id(0x55EE).level(3).type(
             EBMLTypeInfo.TYPE.UINTEGER).build();
+	public static final EBMLTypeInfo BLOCKADDITIONMAPPING = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("BlockAdditionMapping").id(0x41E4).level(3).type(
+            EBMLTypeInfo.TYPE.MASTER).build();
+	public static final EBMLTypeInfo BLOCKADDIDVALUE = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("BlockAddIDValue").id(0x41F0).level(4).type(
+            EBMLTypeInfo.TYPE.UINTEGER).build();
+	public static final EBMLTypeInfo BLOCKADDIDNAME = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("BlockAddIDName").id(0x41A4).level(4).type(
+            EBMLTypeInfo.TYPE.STRING).build();
+	public static final EBMLTypeInfo BLOCKADDIDTYPE = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("BlockAddIDType").id(0x41E7).level(4).type(
+            EBMLTypeInfo.TYPE.UINTEGER).build();
+	public static final EBMLTypeInfo BLOCKADDIDEXTRADATA = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("BlockAddIDExtraData").id(0x41ED).level(4).type(
+            EBMLTypeInfo.TYPE.BINARY).build();
 	public static final EBMLTypeInfo NAME = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("Name").id(0x536E).level(3).type(
             EBMLTypeInfo.TYPE.UTF_8).build();
 	public static final EBMLTypeInfo LANGUAGE = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("Language").id(0x22B59C).level(3).type(
+            EBMLTypeInfo.TYPE.STRING).build();
+	public static final EBMLTypeInfo LANGUAGEIETF = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("LanguageIETF").id(0x22B59D).level(3).type(
             EBMLTypeInfo.TYPE.STRING).build();
 	public static final EBMLTypeInfo CODECID = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("CodecID").id(0x86).level(3).type(
             EBMLTypeInfo.TYPE.STRING).build();
@@ -318,6 +343,18 @@ public class MkvTypeInfos {
             EBMLTypeInfo.TYPE.FLOAT).build();
 	public static final EBMLTypeInfo LUMINANCEMIN = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("LuminanceMin").id(0x55DA).level(6).type(
             EBMLTypeInfo.TYPE.FLOAT).build();
+	public static final EBMLTypeInfo PROJECTION = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("Projection").id(0x7670).level(4).type(
+            EBMLTypeInfo.TYPE.MASTER).build();
+	public static final EBMLTypeInfo PROJECTIONTYPE = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("ProjectionType").id(0x7671).level(5).type(
+            EBMLTypeInfo.TYPE.UINTEGER).build();
+	public static final EBMLTypeInfo PROJECTIONPRIVATE = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("ProjectionPrivate").id(0x7672).level(5).type(
+            EBMLTypeInfo.TYPE.BINARY).build();
+	public static final EBMLTypeInfo PROJECTIONPOSEYAW = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("ProjectionPoseYaw").id(0x7673).level(5).type(
+            EBMLTypeInfo.TYPE.FLOAT).build();
+	public static final EBMLTypeInfo PROJECTIONPOSEPITCH = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("ProjectionPosePitch").id(0x7674).level(5).type(
+            EBMLTypeInfo.TYPE.FLOAT).build();
+	public static final EBMLTypeInfo PROJECTIONPOSEROLL = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("ProjectionPoseRoll").id(0x7675).level(5).type(
+            EBMLTypeInfo.TYPE.FLOAT).build();
 	public static final EBMLTypeInfo AUDIO = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("Audio").id(0xE1).level(3).type(
             EBMLTypeInfo.TYPE.MASTER).build();
 	public static final EBMLTypeInfo SAMPLINGFREQUENCY = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("SamplingFrequency").id(0xB5).level(4).type(
@@ -329,6 +366,8 @@ public class MkvTypeInfos {
 	public static final EBMLTypeInfo CHANNELPOSITIONS = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("ChannelPositions").id(0x7D7B).level(4).type(
             EBMLTypeInfo.TYPE.BINARY).build();
 	public static final EBMLTypeInfo BITDEPTH = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("BitDepth").id(0x6264).level(4).type(
+            EBMLTypeInfo.TYPE.UINTEGER).build();
+	public static final EBMLTypeInfo EMPHASIS = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("Emphasis").id(0x52F1).level(4).type(
             EBMLTypeInfo.TYPE.UINTEGER).build();
 	public static final EBMLTypeInfo TRACKOPERATION = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("TrackOperation").id(0xE2).level(3).type(
             EBMLTypeInfo.TYPE.MASTER).build();
@@ -376,6 +415,10 @@ public class MkvTypeInfos {
             EBMLTypeInfo.TYPE.UINTEGER).build();
 	public static final EBMLTypeInfo CONTENTENCKEYID = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("ContentEncKeyID").id(0x47E2).level(6).type(
             EBMLTypeInfo.TYPE.BINARY).build();
+	public static final EBMLTypeInfo CONTENTENCAESSETTINGS = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("ContentEncAESSettings").id(0x47E7).level(6).type(
+            EBMLTypeInfo.TYPE.MASTER).build();
+	public static final EBMLTypeInfo AESSETTINGSCIPHERMODE = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("AESSettingsCipherMode").id(0x47E8).level(6).type(
+            EBMLTypeInfo.TYPE.UINTEGER).build();
 	public static final EBMLTypeInfo CONTENTSIGNATURE = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("ContentSignature").id(0x47E3).level(6).type(
             EBMLTypeInfo.TYPE.BINARY).build();
 	public static final EBMLTypeInfo CONTENTSIGKEYID = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("ContentSigKeyID").id(0x47E4).level(6).type(
@@ -446,6 +489,12 @@ public class MkvTypeInfos {
             EBMLTypeInfo.TYPE.UINTEGER).build();
 	public static final EBMLTypeInfo EDITIONFLAGORDERED = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("EditionFlagOrdered").id(0x45DD).level(3).type(
             EBMLTypeInfo.TYPE.UINTEGER).build();
+	public static final EBMLTypeInfo EDITIONDISPLAY = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("EditionDisplay").id(0x4520).level(3).type(
+            EBMLTypeInfo.TYPE.MASTER).build();
+	public static final EBMLTypeInfo EDITIONSTRING = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("EditionString").id(0x4521).level(4).type(
+            EBMLTypeInfo.TYPE.UTF_8).build();
+	public static final EBMLTypeInfo EDITIONLANGUAGEIETF = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("EditionLanguageIETF").id(0x45E4).level(4).type(
+            EBMLTypeInfo.TYPE.STRING).build();
 	public static final EBMLTypeInfo CHAPTERATOM = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("ChapterAtom").id(0xB6).level(3).type(
             EBMLTypeInfo.TYPE.MASTER).isRecursive(true).build();
 	public static final EBMLTypeInfo CHAPTERUID = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("ChapterUID").id(0x73C4).level(4).type(
@@ -462,6 +511,8 @@ public class MkvTypeInfos {
             EBMLTypeInfo.TYPE.UINTEGER).build();
 	public static final EBMLTypeInfo CHAPTERSEGMENTUID = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("ChapterSegmentUID").id(0x6E67).level(4).type(
             EBMLTypeInfo.TYPE.BINARY).build();
+	public static final EBMLTypeInfo CHAPTERSKIPTYPE = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("ChapterSkipType").id(0x4588).level(4).type(
+            EBMLTypeInfo.TYPE.UINTEGER).build();
 	public static final EBMLTypeInfo CHAPTERSEGMENTEDITIONUID = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("ChapterSegmentEditionUID").id(0x6EBC).level(4).type(
             EBMLTypeInfo.TYPE.UINTEGER).build();
 	public static final EBMLTypeInfo CHAPTERPHYSICALEQUIV = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("ChapterPhysicalEquiv").id(0x63C3).level(4).type(
@@ -475,6 +526,8 @@ public class MkvTypeInfos {
 	public static final EBMLTypeInfo CHAPSTRING = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("ChapString").id(0x85).level(5).type(
             EBMLTypeInfo.TYPE.UTF_8).build();
 	public static final EBMLTypeInfo CHAPLANGUAGE = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("ChapLanguage").id(0x437C).level(5).type(
+            EBMLTypeInfo.TYPE.STRING).build();
+	public static final EBMLTypeInfo CHAPLANGUAGEIETF = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("ChapLanguageIETF").id(0x437D).level(5).type(
             EBMLTypeInfo.TYPE.STRING).build();
 	public static final EBMLTypeInfo CHAPCOUNTRY = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("ChapCountry").id(0x437E).level(5).type(
             EBMLTypeInfo.TYPE.STRING).build();
@@ -508,13 +561,19 @@ public class MkvTypeInfos {
             EBMLTypeInfo.TYPE.UINTEGER).build();
 	public static final EBMLTypeInfo TAGATTACHMENTUID = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("TagAttachmentUID").id(0x63C6).level(4).type(
             EBMLTypeInfo.TYPE.UINTEGER).build();
+	public static final EBMLTypeInfo TAGBLOCKADDIDVALUE = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("TagBlockAddIDValue").id(0x63C7).level(4).type(
+            EBMLTypeInfo.TYPE.UINTEGER).build();
 	public static final EBMLTypeInfo SIMPLETAG = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("SimpleTag").id(0x67C8).level(3).type(
             EBMLTypeInfo.TYPE.MASTER).isRecursive(true).build();
 	public static final EBMLTypeInfo TAGNAME = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("TagName").id(0x45A3).level(4).type(
             EBMLTypeInfo.TYPE.UTF_8).build();
 	public static final EBMLTypeInfo TAGLANGUAGE = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("TagLanguage").id(0x447A).level(4).type(
             EBMLTypeInfo.TYPE.STRING).build();
+	public static final EBMLTypeInfo TAGLANGUAGEIETF = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("TagLanguageIETF").id(0x447B).level(4).type(
+            EBMLTypeInfo.TYPE.STRING).build();
 	public static final EBMLTypeInfo TAGDEFAULT = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("TagDefault").id(0x4484).level(4).type(
+            EBMLTypeInfo.TYPE.UINTEGER).build();
+	public static final EBMLTypeInfo TAGDEFAULTBOGUS = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("TagDefaultBogus").id(0x44B4).level(4).type(
             EBMLTypeInfo.TYPE.UINTEGER).build();
 	public static final EBMLTypeInfo TAGSTRING = new EBMLTypeInfo.EBMLTypeInfoBuilder().name("TagString").id(0x4487).level(4).type(
             EBMLTypeInfo.TYPE.UTF_8).build();

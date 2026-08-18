@@ -37,7 +37,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -188,6 +190,99 @@ public class StreamingMkvReaderTest {
         }
     }
 
+    @Test
+    public void testNewElementsParsedCorrectly() throws IOException, MkvElementVisitException {
+        try (InputStream is = TestResourceUtil.getTestInputStream("new_matroska_elements_2026-08.mkv")) {
+            StreamingMkvReader reader = StreamingMkvReader.createDefault(new InputStreamParserByteSource(is));
+
+            List<TypeInfoOffsetAndLength> actual = new ArrayList<>();
+
+            reader.apply(new MkvElementVisitor() {
+                long offset = 0;
+
+                @Override
+                public void visit(MkvStartMasterElement startMasterElement) {
+                    long length = startMasterElement.getIdAndSizeRawBytesLength() + startMasterElement.getDataSize();
+                    actual.add(new TypeInfoOffsetAndLength(startMasterElement.elementMetaData.getTypeInfo(), offset, length));
+                    offset += startMasterElement.getIdAndSizeRawBytesLength();
+                }
+
+                @Override
+                public void visit(MkvEndMasterElement endMasterElement) {
+                }
+
+                @Override
+                public void visit(MkvDataElement dataElement) {
+                    long length = dataElement.getIdAndSizeRawBytesLength() + dataElement.getDataSize();
+                    actual.add(new TypeInfoOffsetAndLength(dataElement.elementMetaData.getTypeInfo(), offset, length));
+                    offset += length;
+                }
+            });
+
+            Assert.assertEquals(
+                // Expected offsets and lengths were captured from `mkvinfo -z -P new_matroska_elements_2026-08.mkv` output
+                Arrays.asList(
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.EBML, 0, 40),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.EBMLVERSION, 5, 4),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.EBMLREADVERSION, 9, 4),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.EBMLMAXIDLENGTH, 13, 4),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.EBMLMAXSIZELENGTH, 17, 4),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.DOCTYPE, 21, 11),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.DOCTYPEVERSION, 32, 4),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.DOCTYPEREADVERSION, 36, 4),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.SEGMENT, 40, 215),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.TRACKS, 46, 108),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.TRACKENTRY, 51, 103),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.TRACKNUMBER, 53, 3),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.TRACKUID, 56, 4),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.TRACKTYPE, 60, 3),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.LANGUAGEIETF, 63, 6),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.FLAGHEARINGIMPAIRED, 69, 4),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.FLAGVISUALIMPAIRED, 73, 4),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.FLAGTEXTDESCRIPTIONS, 77, 4),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.FLAGORIGINAL, 81, 4),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.FLAGCOMMENTARY, 85, 4),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.BLOCKADDITIONMAPPING, 89, 24),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.BLOCKADDIDVALUE, 92, 4),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.BLOCKADDIDNAME, 96, 7),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.BLOCKADDIDTYPE, 103, 4),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.BLOCKADDIDEXTRADATA, 107, 6),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.VIDEO, 113, 35),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.PROJECTION, 115, 33),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.PROJECTIONTYPE, 118, 4),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.PROJECTIONPRIVATE, 122, 5),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.PROJECTIONPOSEYAW, 127, 7),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.PROJECTIONPOSEPITCH, 134, 7),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.PROJECTIONPOSEROLL, 141, 7),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.AUDIO, 148, 6),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.EMPHASIS, 150, 4),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.CHAPTERS, 154, 61),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.EDITIONENTRY, 159, 56),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.EDITIONUID, 162, 4),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.EDITIONDISPLAY, 166, 18),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.EDITIONSTRING, 169, 10),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.EDITIONLANGUAGEIETF, 179, 5),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.CHAPTERATOM, 184, 31),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.CHAPTERUID, 186, 4),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.CHAPTERTIMESTART, 190, 3),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.CHAPTERSKIPTYPE, 193, 4),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.CHAPTERDISPLAY, 197, 18),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.CHAPSTRING, 199, 11),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.CHAPLANGUAGEIETF, 210, 5),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.TAGS, 215, 34),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.TAG, 220, 29),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.TARGETS, 223, 11),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.TAGTRACKUID, 226, 4),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.TAGBLOCKADDIDVALUE, 230, 4),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.SIMPLETAG, 234, 15),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.TAGNAME, 237, 8),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.TAGDEFAULTBOGUS, 245, 4),
+                    new TypeInfoOffsetAndLength(MkvTypeInfos.VOID, 249, 6)
+                ),
+                actual
+            );
+        }
+    }
 
     private CountVisitor readAllReturnedElements(StreamingMkvReader streamReader)
             throws MkvElementVisitException {
@@ -246,6 +341,34 @@ public class StreamingMkvReaderTest {
             }
         }
 
+    }
+
+    private static final class TypeInfoOffsetAndLength {
+        private final EBMLTypeInfo typeInfo;
+        private final long offset;
+        private final long length;
+
+        private TypeInfoOffsetAndLength(EBMLTypeInfo typeInfo, long offset, long length) {
+            this.typeInfo = typeInfo;
+            this.offset = offset;
+            this.length = length;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == null || getClass() != o.getClass()) return false;
+
+            TypeInfoOffsetAndLength that = (TypeInfoOffsetAndLength) o;
+            return offset == that.offset && length == that.length && Objects.equals(typeInfo, that.typeInfo);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = Objects.hashCode(typeInfo);
+            result = 31 * result + Long.hashCode(offset);
+            result = 31 * result + Long.hashCode(length);
+            return result;
+        }
     }
 
     private InputStreamParserByteSource getClustersByteSource() throws IOException {
